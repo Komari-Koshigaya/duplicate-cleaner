@@ -645,6 +645,8 @@ class DuplicateCleanerGUI:
         row = self.tree.identify_row(event.y)
         if row:
             self.tree.selection_set(row)
+            # 确保选中后再获取路径
+            self.root.update_idletasks()
             fp = self._get_clicked_filepath(event)
             if fp:
                 self.context_menu.post(event.x_root, event.y_root)
@@ -694,6 +696,7 @@ class DuplicateCleanerGUI:
         """显示文件属性对话框"""
         fp = self._get_selected_filepath()
         if not fp:
+            logger.warning("未选中文件")
             return
 
         try:
@@ -718,10 +721,11 @@ class DuplicateCleanerGUI:
 只读: {'是' if not os.access(fp, os.WRITE) else '否'}
 隐藏: {'是' if Path(fp).name.startswith('.') else '否'}"""
 
-            messagebox.showinfo("文件属性", props)
+            messagebox.showinfo("文件属性", props, parent=self.root)
 
         except OSError as e:
-            messagebox.showerror("错误", f"无法获取文件属性: {e}")
+            logger.error(f"获取文件属性失败: {e}")
+            messagebox.showerror("错误", f"无法获取文件属性: {e}", parent=self.root)
 
     def _open_file_path(self, fp):
         try:
