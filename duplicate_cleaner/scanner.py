@@ -58,7 +58,10 @@ def detect_disk_type(path: str) -> str:
             # 尝试通过 PowerShell 检测
             try:
                 cmd = f'powershell -Command "Get-PhysicalDisk | Where-Object {{$_.DeviceID -eq (Get-Partition -DriveLetter {drive_letter}).DiskNumber}} | Select-Object -ExpandProperty MediaType"'
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=5,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
                 media_type = result.stdout.strip().lower()
                 if "ssd" in media_type or "solid" in media_type:
                     return "ssd"
