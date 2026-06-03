@@ -81,8 +81,15 @@ class DuplicateCleanerGUI:
 
         self.root = root
         self.root.title(f"Duplicate Cleaner v{__version__}")
-        self.root.geometry("1300x800")
         self.root.minsize(1000, 600)
+
+        # 窗口居中显示
+        w, h = 1300, 800
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
 
         # 核心组件
         self.config = AppConfig.load()
@@ -704,39 +711,54 @@ class DuplicateCleanerGUI:
 
         fp = values[4]  # path 在第 4 列
 
-        # 使用简单对话框测试
+        # 显示文件属性
         try:
             stat = os.stat(fp)
             size = format_size(stat.st_size)
             mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
             ctime = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
 
-            # 使用 Toplevel 创建自定义对话框
+            # 创建对话框
             dlg = tk.Toplevel(self.root)
             dlg.title("文件属性")
             dlg.transient(self.root)
             dlg.grab_set()
 
-            # 计算居中位置
-            w, h = 500, 350
+            # 主框架
+            main_frame = tk.Frame(dlg, padx=20, pady=15)
+            main_frame.pack(fill=BOTH, expand=True)
+
+            # 文件信息（使用 Label 自适应）
+            tk.Label(main_frame, text="📄 文件属性", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=W, pady=(0, 15))
+
+            # 信息网格
+            info_frame = tk.Frame(main_frame)
+            info_frame.pack(fill=X)
+
+            row = 0
+            for label_text, value in [
+                ("路径:", fp),
+                ("文件名:", Path(fp).name),
+                ("大小:", f"{size} ({stat.st_size:,} 字节)"),
+                ("修改时间:", mtime),
+                ("创建时间:", ctime),
+            ]:
+                tk.Label(info_frame, text=label_text, font=("Microsoft YaHei UI", 10, "bold")).grid(row=row, column=0, sticky=W, pady=2)
+                tk.Label(info_frame, text=value, font=("Microsoft YaHei UI", 10)).grid(row=row, column=1, sticky=W, padx=(10, 0), pady=2)
+                row += 1
+
+            # 按钮
+            tk.Button(main_frame, text="确定", command=dlg.destroy, width=10).pack(pady=(15, 0))
+
+            # 自适应大小
+            dlg.update_idletasks()
+            w = dlg.winfo_reqwidth() + 40
+            h = dlg.winfo_reqheight() + 20
             sw = self.root.winfo_screenwidth()
             sh = self.root.winfo_screenheight()
             x = (sw - w) // 2
             y = (sh - h) // 2
             dlg.geometry(f"{w}x{h}+{x}+{y}")
-
-            # 文件信息
-            info = f"路径: {fp}\n\n"
-            info += f"文件名: {Path(fp).name}\n\n"
-            info += f"大小: {size} ({stat.st_size:,} 字节)\n\n"
-            info += f"修改时间: {mtime}\n\n"
-            info += f"创建时间: {ctime}"
-
-            label = tk.Label(dlg, text=info, justify=LEFT, padx=20, pady=20, font=("Microsoft YaHei UI", 11))
-            label.pack(fill=BOTH, expand=True)
-
-            btn = tk.Button(dlg, text="确定", command=dlg.destroy, width=10)
-            btn.pack(pady=10)
 
         except OSError as e:
             messagebox.showerror("错误", f"无法获取文件属性:\n{e}", parent=self.root)
