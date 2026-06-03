@@ -696,7 +696,7 @@ class DuplicateCleanerGUI:
         """显示文件属性对话框"""
         fp = self._get_selected_filepath()
         if not fp:
-            logger.warning("未选中文件")
+            messagebox.showwarning("提示", "请先选择一个文件", parent=self.root)
             return
 
         try:
@@ -724,7 +724,6 @@ class DuplicateCleanerGUI:
             messagebox.showinfo("文件属性", props, parent=self.root)
 
         except OSError as e:
-            logger.error(f"获取文件属性失败: {e}")
             messagebox.showerror("错误", f"无法获取文件属性: {e}", parent=self.root)
 
     def _open_file_path(self, fp):
