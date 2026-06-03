@@ -1148,11 +1148,9 @@ class DuplicateCleanerGUI:
 
         for key, desc in shortcuts:
             row = tk.Frame(frame)
-            row.pack(fill=tk.X, pady=2)
+            row.pack(fill=tk.X, pady=3)
             tk.Label(row, text=key, font=("Consolas", 11), width=15, anchor=tk.W).pack(side=tk.LEFT)
             tk.Label(row, text=desc, font=("Microsoft YaHei UI", 11)).pack(side=tk.LEFT)
-
-        tk.Button(frame, text="确定", command=win.destroy, width=10).pack(pady=(15, 0))
 
     def _show_about(self):
         win = tk.Toplevel(self.root)
@@ -1161,22 +1159,21 @@ class DuplicateCleanerGUI:
         win.grab_set()
 
         # 居中显示
-        w, h = 400, 300
+        w, h = 500, 400
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = tk.Frame(win, padx=20, pady=20)
+        frame = tk.Frame(win, padx=30, pady=30)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 16, "bold")).pack(pady=(0, 10))
-        tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 12)).pack()
-        tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别", font=("Microsoft YaHei UI", 11)).pack()
-        tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 10), fg="gray").pack(pady=(10, 0))
-
-        tk.Button(frame, text="确定", command=win.destroy, width=10).pack(pady=(15, 0))
+        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 20, "bold")).pack(pady=(0, 15))
+        tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 14)).pack()
+        tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别\n支持图形界面和命令行两种模式", font=("Microsoft YaHei UI", 12)).pack(pady=(10, 0))
+        tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(20, 0))
+        tk.Label(frame, text="作者: Kanji", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(5, 0))
 
     # ==================== 工具 ====================
 
