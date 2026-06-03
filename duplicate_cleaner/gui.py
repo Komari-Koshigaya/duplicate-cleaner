@@ -615,7 +615,8 @@ class DuplicateCleanerGUI:
     def _open_folder_path(self, fp):
         try:
             if os.name == 'nt':
-                subprocess.run(['explorer', '/select,', fp], check=True)
+                # Windows explorer /select 即使成功也返回非零退出码，不用 check=True
+                subprocess.run(['explorer', '/select,', fp])
             elif sys.platform == 'darwin':
                 subprocess.run(['open', '-R', fp], check=True)
             else:
