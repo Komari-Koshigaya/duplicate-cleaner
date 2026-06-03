@@ -282,6 +282,8 @@ class DuplicateCleanerGUI:
         self.root.bind("<Control-q>", lambda e: self._on_close())
         self.root.bind("<F1>", lambda e: self._show_help())
         self.root.bind("<F5>", lambda e: self._start_scan())
+        self.root.bind("<Control-Shift-S>", lambda e: self._save_results())
+        self.root.bind("<Control-Shift-O>", lambda e: self._load_results())
 
         # 拖放支持
         self._setup_drag_drop()
@@ -346,13 +348,22 @@ class DuplicateCleanerGUI:
         menubar.add_cascade(label="文件", menu=fm)
         fm.add_command(label="📂 选择目录", command=self._browse_dir, accelerator="Ctrl+O")
         fm.add_separator()
-        fm.add_command(label="📊 导出扫描结果", command=self._export_results, accelerator="Ctrl+E")
+        fm.add_command(label="💾 保存扫描结果", command=self._save_results, accelerator="Ctrl+Shift+S")
+        fm.add_command(label="📂 加载扫描结果", command=self._load_results, accelerator="Ctrl+Shift+O")
+        fm.add_separator()
+        fm.add_command(label="📊 导出为 CSV", command=self._export_results, accelerator="Ctrl+E")
         fm.add_separator()
         fm.add_command(label="❌ 退出", command=self._on_close, accelerator="Ctrl+Q")
 
         # 视图
         vm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="视图", menu=vm)
+
+        # 深色模式
+        self.dark_mode_var = tk.BooleanVar(value=False)
+        vm.add_checkbutton(label="🌙 深色模式", variable=self.dark_mode_var, command=self._toggle_dark_mode)
+        vm.add_separator()
+
         wm = tk.Menu(vm, tearoff=0)
         vm.add_cascade(label="窗口大小", menu=wm)
         for s in ["小", "中", "大"]:
@@ -461,6 +472,45 @@ class DuplicateCleanerGUI:
     def _reset_view(self):
         self._change_window_size("中")
         self._change_font_size("中")
+
+    def _toggle_dark_mode(self):
+        """切换深色模式"""
+        if self.dark_mode_var.get():
+            # 深色模式颜色
+            bg = "#1e1e1e"
+            fg = "#ffffff"
+            select_bg = "#264f78"
+            field_bg = "#2d2d2d"
+        else:
+            # 浅色模式颜色
+            bg = "#f5f5f5"
+            fg = "#000000"
+            select_bg = "#0078d7"
+            field_bg = "#ffffff"
+
+        # 应用到主窗口
+        self.root.configure(bg=bg)
+
+        # 应用到 Treeview
+        style = _ttk.Style()
+        style.configure("Treeview",
+                        background=field_bg,
+                        foreground=fg,
+                        fieldbackground=field_bg)
+        style.configure("Treeview.Heading",
+                        background=bg,
+                        foreground=fg)
+        style.map("Treeview",
+                  background=[("selected", select_bg)],
+                  foreground=[("selected", fg)])
+
+        # 更新标签颜色
+        if self.dark_mode_var.get():
+            self.tree.tag_configure("original", background="#1a3a1a", foreground="#4caf50")
+            self.tree.tag_configure("duplicate", background="#3a3a1a", foreground="#ffeb3b")
+        else:
+            self.tree.tag_configure("original", background="#e8f5e9", foreground="#2e7d32")
+            self.tree.tag_configure("duplicate", background="#fff8e1", foreground="#f57f17")
 
     def _focus_search(self):
         def find(w):
@@ -890,6 +940,77 @@ class DuplicateCleanerGUI:
             logger.error(f"导出失败: {e}")
             messagebox.showerror("错误", f"导出失败: {e}")
 
+    def _save_results(self):
+        """保存扫描结果为 JSON"""
+        if not self.scan_result or not self.scan_result.duplicates:
+            messagebox.showinfo("提示", "没有可保存的扫描结果")
+            return
+
+        fp = filedialog.asksaveasfilename(
+            title="保存扫描结果",
+            defaultextension=".json",
+            filetypes=[("JSON", "*.json"), ("所有文件", "*.*")]
+        )
+        if not fp:
+            return
+
+        try:
+            import json
+            data = {
+                "version": __version__,
+                "duplicates": [
+                    {"hash": h, "files": files, "size": size}
+                    for h, files, size in self.scan_result.duplicates
+                ],
+                "total_scanned": self.scan_result.total_scanned,
+                "total_duplicates": self.scan_result.total_duplicates,
+                "total_wasted": self.scan_result.total_wasted,
+                "selected": list(self.selected_files)
+            }
+            with open(fp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            messagebox.showinfo("成功", f"扫描结果已保存到:\n{fp}")
+        except Exception as e:
+            logger.error(f"保存失败: {e}")
+            messagebox.showerror("错误", f"保存失败: {e}")
+
+    def _load_results(self):
+        """加载扫描结果"""
+        fp = filedialog.askopenfilename(
+            title="加载扫描结果",
+            filetypes=[("JSON", "*.json"), ("所有文件", "*.*")]
+        )
+        if not fp:
+            return
+
+        try:
+            import json
+            with open(fp, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 重建 ScanResult
+            from .scanner import ScanResult
+            result = ScanResult()
+            for item in data.get("duplicates", []):
+                result.duplicates.append((item["hash"], item["files"], item["size"]))
+            result.total_scanned = data.get("total_scanned", 0)
+            result.total_duplicates = data.get("total_duplicates", 0)
+            result.total_wasted = data.get("total_wasted", 0)
+
+            # 恢复选中状态
+            self.selected_files = set(data.get("selected", []))
+
+            # 显示结果
+            self._display_results(result)
+
+            # 恢复选中状态的显示
+            self._refresh_checks()
+
+            messagebox.showinfo("成功", f"已加载扫描结果:\n{fp}")
+        except Exception as e:
+            logger.error(f"加载失败: {e}")
+            messagebox.showerror("错误", f"加载失败: {e}")
+
     # ==================== 帮助 ====================
 
     def _show_help(self):
@@ -901,15 +1022,45 @@ class DuplicateCleanerGUI:
         t.pack(fill=tk.BOTH, expand=True)
         t.insert(tk.END, f"""📖 使用说明 (v{__version__})
 
-1. 选择目录 - 点击「浏览」或从下拉列表选择
-2. 设置选项 - 递归、最小大小、文件类型
-3. 开始扫描 - 点击「🔍 开始扫描」或 Ctrl+S
-4. 查看结果 - 绿色=保留 橙色=删除
-5. 删除文件 - 自动选中推荐删除的文件""")
+1. 选择目录
+   点击「浏览」或从下拉列表选择最近目录
+   也可以直接拖放文件夹到窗口
+
+2. 设置选项
+   • 递归子目录：是否扫描子文件夹
+   • 最小文件大小：忽略小于此大小的文件
+   • 文件类型：设置 → 文件类型过滤
+
+3. 开始扫描
+   点击「🔍 开始扫描」或按 Ctrl+S
+
+4. 查看结果
+   • 绿色行：每组第一个文件（建议保留）
+   • 橙色行：重复文件（建议删除）
+   • 双击打开预览，右键更多操作
+   • 点击列头可排序
+
+5. 删除文件
+   扫描自动选中推荐删除的文件
+   点击「🗑️ 删除选中」确认
+
+6. 保存/加载结果
+   • Ctrl+Shift+S 保存扫描结果
+   • Ctrl+Shift+O 加载之前的扫描结果
+
+7. 深色模式
+   视图 → 深色模式""")
         t.configure(state=tk.DISABLED)
 
     def _show_shortcuts(self):
-        messagebox.showinfo("快捷键", "Ctrl+O 选择目录\nCtrl+S 开始扫描\nCtrl+E 导出\nCtrl+Q 退出\nF1 帮助\nF5 刷新")
+        messagebox.showinfo("快捷键", """Ctrl+O        选择目录
+Ctrl+S        开始扫描
+Ctrl+E        导出为 CSV
+Ctrl+Shift+S  保存扫描结果
+Ctrl+Shift+O  加载扫描结果
+Ctrl+Q        退出
+F1            帮助
+F5            刷新扫描""")
 
     def _show_about(self):
         messagebox.showinfo("关于", f"🔍 Duplicate Cleaner\nv{__version__}\n\n重复文件清理工具\nPython + tkinter + ttkbootstrap")
