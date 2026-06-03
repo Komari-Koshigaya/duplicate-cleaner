@@ -481,87 +481,72 @@ class DuplicateCleanerGUI:
 
     def _toggle_dark_mode(self):
         """切换深色模式"""
-        if self.dark_mode_var.get():
-            # 深色模式颜色
-            bg = "#1e1e1e"
-            fg = "#d4d4d4"
-            select_bg = "#264f78"
-            field_bg = "#252526"
-            button_bg = "#333333"
-            entry_bg = "#3c3c3c"
-            accent = "#569cd6"
-        else:
-            # 浅色模式颜色
-            bg = "#f5f5f5"
-            fg = "#000000"
-            select_bg = "#0078d7"
-            field_bg = "#ffffff"
-            button_bg = "#e1e1e1"
-            entry_bg = "#ffffff"
-            accent = "#0066cc"
+        if not _has_bootstrap:
+            # 没有 ttkbootstrap 时使用简单深色模式
+            self._toggle_dark_mode_simple()
+            return
 
-        # 应用到 ttk 样式
         style = _ttk.Style()
 
-        # Treeview
-        style.configure("Treeview",
-                        background=field_bg,
-                        foreground=fg,
-                        fieldbackground=field_bg,
-                        borderwidth=0)
-        style.configure("Treeview.Heading",
-                        background=button_bg,
-                        foreground=fg,
-                        relief="flat")
-        style.map("Treeview",
-                  background=[("selected", select_bg)],
-                  foreground=[("selected", "#ffffff")])
-        style.map("Treeview.Heading",
-                  background=[("active", select_bg)])
-
-        # Frame 和 Label
-        style.configure("TFrame", background=bg)
-        style.configure("TLabel", background=bg, foreground=fg)
-        style.configure("TLabelframe", background=bg, foreground=fg)
-        style.configure("TLabelframe.Label", background=bg, foreground=fg)
-
-        # Button
-        style.configure("TButton",
-                        background=button_bg,
-                        foreground=fg,
-                        relief="flat")
-        style.map("TButton",
-                  background=[("active", select_bg), ("disabled", "#3c3c3c")],
-                  foreground=[("disabled", "#808080")])
-
-        # Entry 和 Combobox
-        style.configure("TEntry",
-                        fieldbackground=entry_bg,
-                        foreground=fg,
-                        insertcolor=fg)
-        style.configure("TCombobox",
-                        fieldbackground=entry_bg,
-                        foreground=fg,
-                        arrowcolor=fg)
-
-        # Checkbutton
-        style.configure("TCheckbutton",
-                        background=bg,
-                        foreground=fg)
-
-        # Progressbar
-        try:
-            style.configure("TProgressbar",
-                            background=accent,
-                            troughcolor=field_bg)
-        except Exception:
-            pass
-
-        # 更新标签颜色
         if self.dark_mode_var.get():
+            # 使用 ttkbootstrap 的 darkly 主题
+            style.theme_use("darkly")
+            # Treeview 深色样式
+            style.configure("Treeview",
+                            background="#2b2b2b",
+                            foreground="#ffffff",
+                            fieldbackground="#2b2b2b",
+                            rowheight=28,
+                            font=("Microsoft YaHei UI", 9))
+            style.configure("Treeview.Heading",
+                            font=("Microsoft YaHei UI", 9, "bold"))
+            style.map("Treeview",
+                      background=[("selected", "#0d6efd")],
+                      foreground=[("selected", "#ffffff")])
+            # 标签颜色
             self.tree.tag_configure("original", background="#1a3a1a", foreground="#4caf50")
             self.tree.tag_configure("duplicate", background="#3a2a1a", foreground="#ff9800")
         else:
+            # 恢复浅色主题
+            style.theme_use("litera")
+            style.configure("Treeview",
+                            rowheight=28,
+                            font=("Microsoft YaHei UI", 9))
+            style.configure("Treeview.Heading",
+                            font=("Microsoft YaHei UI", 9, "bold"))
+            # 标签颜色
+            self.tree.tag_configure("original", background="#e8f5e9", foreground="#2e7d32")
+            self.tree.tag_configure("duplicate", background="#fff8e1", foreground="#f57f17")
+
+    def _toggle_dark_mode_simple(self):
+        """简单深色模式（无 ttkbootstrap）"""
+        style = _ttk.Style()
+
+        if self.dark_mode_var.get():
+            bg = "#1e1e1e"
+            fg = "#d4d4d4"
+            field_bg = "#252526"
+            select_bg = "#264f78"
+
+            style.theme_use("clam")
+            style.configure(".", background=bg, foreground=fg)
+            style.configure("TFrame", background=bg)
+            style.configure("TLabel", background=bg, foreground=fg)
+            style.configure("TButton", background="#333333", foreground=fg)
+            style.configure("Treeview", background=field_bg, foreground=fg, fieldbackground=field_bg)
+            style.configure("Treeview.Heading", background="#333333", foreground=fg)
+            style.map("Treeview", background=[("selected", select_bg)])
+
+            self.tree.tag_configure("original", background="#1a3a1a", foreground="#4caf50")
+            self.tree.tag_configure("duplicate", background="#3a2a1a", foreground="#ff9800")
+        else:
+            style.theme_use("clam")
+            style.configure("Treeview",
+                            rowheight=28,
+                            font=("Microsoft YaHei UI", 9))
+            style.configure("Treeview.Heading",
+                            font=("Microsoft YaHei UI", 9, "bold"))
+
             self.tree.tag_configure("original", background="#e8f5e9", foreground="#2e7d32")
             self.tree.tag_configure("duplicate", background="#fff8e1", foreground="#f57f17")
 
