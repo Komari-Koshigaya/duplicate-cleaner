@@ -1,88 +1,101 @@
 # 🔍 Duplicate Cleaner
 
-重复文件查找与清理工具，通过文件内容哈希判断重复，支持图形界面和命令行两种模式。
+重复文件查找与清理工具，基于文件内容哈希精准识别重复文件。
 
 ## 功能特点
 
-- ✅ 基于文件内容哈希（MD5）准确判断重复
-- ✅ 图形界面，点击操作，无需输入命令
-- ✅ 递归扫描子目录
-- ✅ 可视化展示重复文件组
-- ✅ 一键选中推荐删除的文件
-- ✅ 删除前二次确认，防止误删
+- ✅ 基于 MD5 哈希准确判断文件内容重复
+- ✅ 多线程并行扫描，高性能
+- ✅ 图形界面（tkinter + ttkbootstrap）
+- ✅ 命令行模式
 - ✅ 双击/右键打开文件预览
-- ✅ 导出扫描结果为 CSV
-- ✅ 自定义窗口大小和字体大小
-- ✅ 快捷键支持
-- ✅ 扫描完成提示音
+- ✅ 列头排序、搜索过滤
 - ✅ 文件类型过滤（图片/视频/音频/文档/压缩包）
-- ✅ 列头排序（点击排序，再点击反向）
-- ✅ 安全删除（移到回收站或永久删除）
-- ✅ 自动保存用户配置
-- ✅ 状态栏显示详细信息
+- ✅ 安全删除（回收站/永久删除）
+- ✅ 导出扫描结果为 CSV
+- ✅ 单实例模式、配置自动保存
+- ✅ 窗口大小/字体大小可调
 
-## 快速开始
+## 项目结构
 
-### 图形界面版（推荐）
-
-```bash
-python duplicate_cleaner_gui.py
+```
+duplicate-cleaner/
+├── duplicate_cleaner/          # 主模块
+│   ├── __init__.py             # 版本信息
+│   ├── __main__.py             # 包入口
+│   ├── cli.py                  # 命令行界面
+│   ├── config.py               # 配置管理
+│   ├── gui.py                  # 图形界面
+│   ├── scanner.py              # 扫描引擎
+│   └── utils.py                # 公共工具
+├── tests/                      # 单元测试
+│   ├── test_cli.py
+│   ├── test_config.py
+│   ├── test_scanner.py
+│   └── test_utils.py
+├── CLAUDE.md                   # 项目说明
+├── README.md                   # 用户文档
+├── requirements.txt            # 依赖声明
+├── pytest.ini                  # 测试配置
+└── 启动.bat                    # Windows 启动脚本
 ```
 
-### 命令行版
+## 安装
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 或只安装核心依赖
+pip install ttkbootstrap send2trash
+```
+
+## 使用方法
+
+### 图形界面
+
+```bash
+# 方式一：直接运行
+python -m duplicate_cleaner
+
+# 方式二：双击启动.bat
+```
+
+### 命令行
 
 ```bash
 # 扫描并交互式清理
-python duplicate_cleaner.py /path/to/directory
+python -m duplicate_cleaner --cli /path/to/directory
 
-# 预览模式，只看不删
-python duplicate_cleaner.py --dry-run /path/to/directory
+# 预览模式
+python -m duplicate_cleaner --cli --dry-run /path/to/directory
 
-# 自动模式，保留每组第一个
-python duplicate_cleaner.py --auto /path/to/directory
+# 自动模式（保留每组第一个）
+python -m duplicate_cleaner --cli --auto /path/to/directory
+
+# 移到回收站
+python -m duplicate_cleaner --cli --trash /path/to/directory
 ```
 
-## 界面预览
+### 运行测试
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  [选择目录] [浏览...] [🔍 开始扫描]                          │
-├─────────────────────────────────────────────────────────────┤
-│  ☑ 递归扫描子目录    最小文件大小: [0] 字节                   │
-├─────────────────────────────────────────────────────────────┤
-│  ████████████████████░░░░░░░░░░  进度: 60%                  │
-├─────────────────────────────────────────────────────────────┤
-│  选择 │ 组号 │ 大小    │ 文件路径          │ 哈希值           │
-│  ⬜   │ #1   │ 12.5 MB │ C:\photo\a.jpg   │ a1b2c3...       │  ← 原文件
-│  ☐    │ #1   │ 12.5 MB │ D:\backup\b.jpg  │ a1b2c3...       │  ← 重复文件
-├─────────────────────────────────────────────────────────────┤
-│  共 3 组重复，浪费 25.1 MB          [全选第2个] [反选] [删除] │
-└─────────────────────────────────────────────────────────────┘
+```bash
+# 运行所有测试
+python -m pytest
+
+# 运行特定测试文件
+python -m pytest tests/test_scanner.py
+
+# 显示覆盖率
+python -m pytest --cov=duplicate_cleaner
 ```
 
-## 操作说明
-
-| 操作 | 说明 |
-|------|------|
-| 点击"选择"列 | 手动勾选/取消单个文件 |
-| **全选每组第2个** | 自动选中每组重复文件，保留第一个原文件 |
-| **反选** | 切换选择状态 |
-| **🗑️ 删除选中文件** | 删除前弹窗确认 |
-
-颜色说明：
-- 🟢 绿色行 = 每组第一个文件（建议保留）
-- 🟠 橙色行 = 重复文件（建议删除）
-
-## 依赖
+## 技术栈
 
 - Python 3.8+
-- tkinter（Python 自带）
-- ttkbootstrap（可选，用于美化界面）
-
-安装依赖：
-```bash
-pip install -r requirements.txt
-```
+- tkinter + ttkbootstrap（GUI）
+- hashlib / threading / concurrent.futures
+- send2trash（安全删除）
 
 ## 许可证
 

@@ -35,6 +35,11 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
 # App config (user-specific)
 .duplicate_cleaner_config.json
 .duplicate_cleaner.lock

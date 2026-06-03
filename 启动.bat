@@ -7,4 +7,4 @@ if errorlevel 1 (
     pip install -r requirements.txt -q
 )
 
-start "" pythonw duplicate_cleaner_gui.py
+start "" pythonw -m duplicate_cleaner
