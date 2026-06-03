@@ -364,19 +364,35 @@ class DuplicateCleanerGUI:
         menubar.add_cascade(label="视图", menu=vm)
 
         # 深色模式
-        self.dark_mode_var = tk.BooleanVar(value=False)
+        self.dark_mode_var = tk.BooleanVar(value=self.config.dark_mode)
         vm.add_checkbutton(label="🌙 深色模式", variable=self.dark_mode_var, command=self._toggle_dark_mode)
         vm.add_separator()
 
+        # 窗口大小（带勾选）
+        self.window_size_var = tk.StringVar(value=self.config.window_size)
         wm = tk.Menu(vm, tearoff=0)
         vm.add_cascade(label="窗口大小", menu=wm)
         for s in ["小", "中", "大"]:
             w, h = WINDOW_SIZES[s]
-            wm.add_radiobutton(label=f"{s} ({w}×{h})", command=lambda x=s: self._change_window_size(x))
+            wm.add_radiobutton(
+                label=f"{s} ({w}×{h})",
+                variable=self.window_size_var,
+                value=s,
+                command=lambda x=s: self._change_window_size(x)
+            )
+
+        # 字体大小（带勾选）
+        self.font_size_var = tk.StringVar(value=self.config.font_size)
         fm2 = tk.Menu(vm, tearoff=0)
         vm.add_cascade(label="字体大小", menu=fm2)
         for s in ["小", "中", "大"]:
-            fm2.add_radiobutton(label=s, command=lambda x=s: self._change_font_size(x))
+            fm2.add_radiobutton(
+                label=s,
+                variable=self.font_size_var,
+                value=s,
+                command=lambda x=s: self._change_font_size(x)
+            )
+
         vm.add_separator()
         vm.add_command(label="恢复默认", command=self._reset_view)
 
@@ -411,8 +427,10 @@ class DuplicateCleanerGUI:
         self.min_size_var.set(self.config.min_size)
 
         # 应用窗口大小
-        if self.config.window_size and self.config.window_size != "中":
-            self._change_window_size(self.config.window_size)
+        self._change_window_size(self.config.window_size)
+
+        # 应用字体大小
+        self._change_font_size(self.config.font_size)
 
         # 应用深色模式
         if self.config.dark_mode:
@@ -472,22 +490,29 @@ class DuplicateCleanerGUI:
             self.dir_var.set(d)
 
     def _change_window_size(self, size):
-        w, h = WINDOW_SIZES.get(size, WINDOW_SIZES["中"])
+        w, h = WINDOW_SIZES.get(size, WINDOW_SIZES["大"])
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         self.root.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
-        # 更新配置
+        # 更新配置和变量
         self.config.window_size = size
+        self.window_size_var.set(size)
 
     def _change_font_size(self, size):
         c = FONT_SIZES.get(size, FONT_SIZES["中"])
         s = _ttk.Style()
         s.configure("Treeview", rowheight=c["row"], font=("Microsoft YaHei UI", c["tree"]))
         s.configure("Treeview.Heading", font=("Microsoft YaHei UI", c["tree"], "bold"))
+        # 更新配置和变量
+        self.config.font_size = size
+        self.font_size_var.set(size)
 
     def _reset_view(self):
-        self._change_window_size("中")
+        self._change_window_size("大")
         self._change_font_size("中")
+        if self.dark_mode_var.get():
+            self.dark_mode_var.set(False)
+            self._toggle_dark_mode()
 
     def _toggle_dark_mode(self):
         """切换深色模式"""

@@ -18,7 +18,7 @@ logger = logging.getLogger("duplicate_cleaner")
 
 # 默认配置值
 DEFAULT_FONT_SIZE = "中"
-DEFAULT_WINDOW_SIZE = "中"
+DEFAULT_WINDOW_SIZE = "大"
 DEFAULT_SOUND_ENABLED = False
 DEFAULT_RECURSIVE = True
 DEFAULT_MIN_SIZE = "0"
