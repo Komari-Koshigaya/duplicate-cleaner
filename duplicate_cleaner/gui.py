@@ -709,20 +709,30 @@ class DuplicateCleanerGUI:
             stat = os.stat(fp)
             size = format_size(stat.st_size)
             mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            ctime = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
 
             # 使用 Toplevel 创建自定义对话框
             dlg = tk.Toplevel(self.root)
             dlg.title("文件属性")
-            dlg.geometry("400x300")
             dlg.transient(self.root)
             dlg.grab_set()
 
+            # 计算居中位置
+            w, h = 500, 350
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            x = (sw - w) // 2
+            y = (sh - h) // 2
+            dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+            # 文件信息
             info = f"路径: {fp}\n\n"
             info += f"文件名: {Path(fp).name}\n\n"
-            info += f"大小: {size}\n\n"
-            info += f"修改时间: {mtime}"
+            info += f"大小: {size} ({stat.st_size:,} 字节)\n\n"
+            info += f"修改时间: {mtime}\n\n"
+            info += f"创建时间: {ctime}"
 
-            label = tk.Label(dlg, text=info, justify=LEFT, padx=20, pady=20, font=("Microsoft YaHei UI", 10))
+            label = tk.Label(dlg, text=info, justify=LEFT, padx=20, pady=20, font=("Microsoft YaHei UI", 11))
             label.pack(fill=BOTH, expand=True)
 
             btn = tk.Button(dlg, text="确定", command=dlg.destroy, width=10)
