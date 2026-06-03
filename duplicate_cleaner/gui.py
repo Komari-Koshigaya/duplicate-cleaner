@@ -406,6 +406,11 @@ class DuplicateCleanerGUI:
         self.recursive_var.set(self.config.recursive)
         self.min_size_var.set(self.config.min_size)
 
+        # 应用深色模式
+        if self.config.dark_mode:
+            self.dark_mode_var.set(True)
+            self._toggle_dark_mode()
+
     # ==================== 配置 ====================
 
     def _save_config(self):
@@ -416,6 +421,7 @@ class DuplicateCleanerGUI:
         self.config.file_filter = self.file_filter_var.get()
         self.config.sound_enabled = self.sound_var.get()
         self.config.single_instance = self.single_instance_var.get()
+        self.config.dark_mode = self.dark_mode_var.get()
         self.config.add_recent_dir(self.dir_var.get())
         self.config.save()
 
@@ -478,36 +484,86 @@ class DuplicateCleanerGUI:
         if self.dark_mode_var.get():
             # 深色模式颜色
             bg = "#1e1e1e"
-            fg = "#ffffff"
+            fg = "#d4d4d4"
             select_bg = "#264f78"
-            field_bg = "#2d2d2d"
+            field_bg = "#252526"
+            button_bg = "#333333"
+            entry_bg = "#3c3c3c"
+            accent = "#569cd6"
         else:
             # 浅色模式颜色
             bg = "#f5f5f5"
             fg = "#000000"
             select_bg = "#0078d7"
             field_bg = "#ffffff"
+            button_bg = "#e1e1e1"
+            entry_bg = "#ffffff"
+            accent = "#0066cc"
 
-        # 应用到主窗口
-        self.root.configure(bg=bg)
-
-        # 应用到 Treeview
+        # 应用到 ttk 样式
         style = _ttk.Style()
+
+        # Treeview
         style.configure("Treeview",
                         background=field_bg,
                         foreground=fg,
-                        fieldbackground=field_bg)
+                        fieldbackground=field_bg,
+                        borderwidth=0)
         style.configure("Treeview.Heading",
-                        background=bg,
-                        foreground=fg)
+                        background=button_bg,
+                        foreground=fg,
+                        relief="flat")
         style.map("Treeview",
                   background=[("selected", select_bg)],
-                  foreground=[("selected", fg)])
+                  foreground=[("selected", "#ffffff")])
+        style.map("Treeview.Heading",
+                  background=[("active", select_bg)])
+
+        # Frame 和 Label
+        style.configure("TFrame", background=bg)
+        style.configure("TLabel", background=bg, foreground=fg)
+        style.configure("TLabelframe", background=bg, foreground=fg)
+        style.configure("TLabelframe.Label", background=bg, foreground=fg)
+
+        # Button
+        style.configure("TButton",
+                        background=button_bg,
+                        foreground=fg,
+                        relief="flat")
+        style.map("TButton",
+                  background=[("active", select_bg), ("disabled", "#3c3c3c")],
+                  foreground=[("disabled", "#808080")])
+
+        # Entry 和 Combobox
+        style.configure("TEntry",
+                        fieldbackground=entry_bg,
+                        foreground=fg,
+                        insertcolor=fg)
+        style.configure("TCombobox",
+                        fieldbackground=entry_bg,
+                        foreground=fg,
+                        arrowcolor=fg)
+
+        # Checkbutton
+        style.configure("TCheckbutton",
+                        background=bg,
+                        foreground=fg)
+
+        # Progressbar
+        style.configure("TProgressbar",
+                        background=accent,
+                        troughcolor=field_bg)
+
+        # Scrollbar
+        style.configure("TScrollbar",
+                        background=button_bg,
+                        troughcolor=field_bg,
+                        arrowcolor=fg)
 
         # 更新标签颜色
         if self.dark_mode_var.get():
             self.tree.tag_configure("original", background="#1a3a1a", foreground="#4caf50")
-            self.tree.tag_configure("duplicate", background="#3a3a1a", foreground="#ffeb3b")
+            self.tree.tag_configure("duplicate", background="#3a2a1a", foreground="#ff9800")
         else:
             self.tree.tag_configure("original", background="#e8f5e9", foreground="#2e7d32")
             self.tree.tag_configure("duplicate", background="#fff8e1", foreground="#f57f17")
@@ -1016,9 +1072,17 @@ class DuplicateCleanerGUI:
     def _show_help(self):
         win = tk.Toplevel(self.root)
         win.title("使用说明")
-        win.geometry("500x500")
         win.transient(self.root)
-        t = tk.Text(win, wrap=tk.WORD, padx=15, pady=15, font=("Microsoft YaHei UI", 10))
+
+        # 居中显示
+        w, h = 600, 650
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{y}")
+
+        t = tk.Text(win, wrap=tk.WORD, padx=20, pady=20, font=("Microsoft YaHei UI", 11))
         t.pack(fill=tk.BOTH, expand=True)
         t.insert(tk.END, f"""📖 使用说明 (v{__version__})
 
@@ -1053,17 +1117,66 @@ class DuplicateCleanerGUI:
         t.configure(state=tk.DISABLED)
 
     def _show_shortcuts(self):
-        messagebox.showinfo("快捷键", """Ctrl+O        选择目录
-Ctrl+S        开始扫描
-Ctrl+E        导出为 CSV
-Ctrl+Shift+S  保存扫描结果
-Ctrl+Shift+O  加载扫描结果
-Ctrl+Q        退出
-F1            帮助
-F5            刷新扫描""")
+        win = tk.Toplevel(self.root)
+        win.title("快捷键")
+        win.transient(self.root)
+        win.grab_set()
+
+        # 居中显示
+        w, h = 400, 350
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{y}")
+
+        frame = tk.Frame(win, padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(frame, text="⌨️ 快捷键", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=tk.W, pady=(0, 15))
+
+        shortcuts = [
+            ("Ctrl+O", "选择目录"),
+            ("Ctrl+S", "开始扫描"),
+            ("Ctrl+E", "导出为 CSV"),
+            ("Ctrl+Shift+S", "保存扫描结果"),
+            ("Ctrl+Shift+O", "加载扫描结果"),
+            ("Ctrl+Q", "退出"),
+            ("F1", "帮助"),
+            ("F5", "刷新扫描"),
+        ]
+
+        for key, desc in shortcuts:
+            row = tk.Frame(frame)
+            row.pack(fill=tk.X, pady=2)
+            tk.Label(row, text=key, font=("Consolas", 11), width=15, anchor=tk.W).pack(side=tk.LEFT)
+            tk.Label(row, text=desc, font=("Microsoft YaHei UI", 11)).pack(side=tk.LEFT)
+
+        tk.Button(frame, text="确定", command=win.destroy, width=10).pack(pady=(15, 0))
 
     def _show_about(self):
-        messagebox.showinfo("关于", f"🔍 Duplicate Cleaner\nv{__version__}\n\n重复文件清理工具\nPython + tkinter + ttkbootstrap")
+        win = tk.Toplevel(self.root)
+        win.title("关于")
+        win.transient(self.root)
+        win.grab_set()
+
+        # 居中显示
+        w, h = 400, 300
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{y}")
+
+        frame = tk.Frame(win, padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 16, "bold")).pack(pady=(0, 10))
+        tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 12)).pack()
+        tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别", font=("Microsoft YaHei UI", 11)).pack()
+        tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 10), fg="gray").pack(pady=(10, 0))
+
+        tk.Button(frame, text="确定", command=win.destroy, width=10).pack(pady=(15, 0))
 
     # ==================== 工具 ====================
 

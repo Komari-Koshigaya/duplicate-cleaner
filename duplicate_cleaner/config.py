@@ -67,6 +67,7 @@ class AppConfig:
         min_size: 最小文件大小（字节字符串）
         file_filter: 文件类型过滤名称
         single_instance: 是否单实例模式
+        dark_mode: 是否深色模式
     """
     font_size: str = DEFAULT_FONT_SIZE
     window_size: str = DEFAULT_WINDOW_SIZE
@@ -77,6 +78,7 @@ class AppConfig:
     min_size: str = DEFAULT_MIN_SIZE
     file_filter: str = DEFAULT_FILE_FILTER
     single_instance: bool = DEFAULT_SINGLE_INSTANCE
+    dark_mode: bool = False
 
     def save(self) -> bool:
         """
@@ -99,6 +101,7 @@ class AppConfig:
                 "min_size": self.min_size,
                 "file_filter": self.file_filter,
                 "single_instance": self.single_instance,
+                "dark_mode": self.dark_mode,
             }
 
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -141,6 +144,7 @@ class AppConfig:
                 min_size=data.get("min_size", DEFAULT_MIN_SIZE),
                 file_filter=data.get("file_filter", DEFAULT_FILE_FILTER),
                 single_instance=data.get("single_instance", DEFAULT_SINGLE_INSTANCE),
+                dark_mode=data.get("dark_mode", False),
             )
 
             logger.debug(f"配置已加载: {config_file}")
