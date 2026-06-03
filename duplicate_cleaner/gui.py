@@ -84,7 +84,7 @@ class DuplicateCleanerGUI:
         self.root.minsize(1000, 600)
 
         # 窗口居中显示
-        w, h = 1300, 800
+        w, h = 1400, 900
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
@@ -589,6 +589,10 @@ class DuplicateCleanerGUI:
         self.scan_result = None
         self.info_var.set("")
         self.search_var.set("")
+
+        # 立即更新进度条状态
+        self.progress_var.set(0)
+        self.status_var.set("🔍 正在初始化扫描...")
 
         import threading
         threading.Thread(target=self._scan_worker, args=(d,), daemon=True).start()
