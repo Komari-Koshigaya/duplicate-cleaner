@@ -704,29 +704,29 @@ class DuplicateCleanerGUI:
 
         fp = values[4]  # path 在第 4 列
 
+        # 使用简单对话框测试
         try:
             stat = os.stat(fp)
             size = format_size(stat.st_size)
             mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-            ctime = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
-            atime = datetime.fromtimestamp(stat.st_atime).strftime("%Y-%m-%d %H:%M:%S")
 
-            props = f"""文件属性
+            # 使用 Toplevel 创建自定义对话框
+            dlg = tk.Toplevel(self.root)
+            dlg.title("文件属性")
+            dlg.geometry("400x300")
+            dlg.transient(self.root)
+            dlg.grab_set()
 
-路径: {fp}
-文件名: {Path(fp).name}
-扩展名: {Path(fp).suffix}
+            info = f"路径: {fp}\n\n"
+            info += f"文件名: {Path(fp).name}\n\n"
+            info += f"大小: {size}\n\n"
+            info += f"修改时间: {mtime}"
 
-大小: {size} ({stat.st_size:,} 字节)
+            label = tk.Label(dlg, text=info, justify=LEFT, padx=20, pady=20, font=("Microsoft YaHei UI", 10))
+            label.pack(fill=BOTH, expand=True)
 
-创建时间: {ctime}
-修改时间: {mtime}
-访问时间: {atime}
-
-只读: {'是' if not os.access(fp, os.WRITE) else '否'}
-隐藏: {'是' if Path(fp).name.startswith('.') else '否'}"""
-
-            messagebox.showinfo("文件属性", props, parent=self.root)
+            btn = tk.Button(dlg, text="确定", command=dlg.destroy, width=10)
+            btn.pack(pady=10)
 
         except OSError as e:
             messagebox.showerror("错误", f"无法获取文件属性:\n{e}", parent=self.root)
