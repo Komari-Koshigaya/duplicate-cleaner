@@ -14,6 +14,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog, constants
 from typing import Optional
 from pathlib import Path
+from datetime import datetime
 
 from . import __version__
 from .config import AppConfig, FONT_SIZES, WINDOW_SIZES, FILE_FILTERS
@@ -41,6 +42,7 @@ END = constants.END
 # ttkbootstrap 延迟加载
 _ttk = None
 _has_bootstrap = False
+_tkdnd = None
 
 
 def _init_ttk():
@@ -56,6 +58,19 @@ def _init_ttk():
         from tkinter import ttk
         _ttk = ttk
         _has_bootstrap = False
+
+
+def _init_tkdnd():
+    """延迟导入 tkinterdnd2（拖放支持）"""
+    global _tkdnd
+    if _tkdnd is not None:
+        return _tkdnd
+    try:
+        import tkinterdnd2
+        _tkdnd = tkinterdnd2
+        return _tkdnd
+    except ImportError:
+        return None
 
 
 class DuplicateCleanerGUI:
@@ -208,22 +223,24 @@ class DuplicateCleanerGUI:
         _ttk.Entry(sf, textvariable=self.search_var).pack(side=LEFT, fill=X, expand=True, padx=(5, 10))
         _ttk.Label(sf, text="输入关键词过滤结果", foreground="gray").pack(side=LEFT)
 
-        # Treeview
+        # Treeview（添加修改时间列）
         lf = _ttk.Frame(outer, padding=8)
         lf.pack(fill=BOTH, expand=True)
 
-        cols = ("select", "group", "size", "path", "hash")
+        cols = ("select", "group", "size", "modified", "path", "hash")
         self.tree = _ttk.Treeview(lf, columns=cols, show="headings", selectmode="extended")
         self.tree.heading("select", text="✓", anchor=CENTER)
         self.tree.heading("group", text="组号 ↕", anchor=CENTER, command=lambda: self._sort_tree("group"))
         self.tree.heading("size", text="大小 ↕", anchor=E, command=lambda: self._sort_tree("size"))
+        self.tree.heading("modified", text="修改时间 ↕", anchor=CENTER, command=lambda: self._sort_tree("modified"))
         self.tree.heading("path", text="文件路径 ↕", anchor=W, command=lambda: self._sort_tree("path"))
         self.tree.heading("hash", text="哈希值", anchor=W)
-        self.tree.column("select", width=40, minwidth=40, anchor=CENTER)
-        self.tree.column("group", width=60, minwidth=50, anchor=CENTER)
-        self.tree.column("size", width=100, minwidth=80, anchor=E)
-        self.tree.column("path", width=500, minwidth=200)
-        self.tree.column("hash", width=350, minwidth=280)
+        self.tree.column("select", width=40, minwidth=40, anchor=CENTER, stretch=False)
+        self.tree.column("group", width=60, minwidth=50, anchor=CENTER, stretch=False)
+        self.tree.column("size", width=90, minwidth=70, anchor=E, stretch=False)
+        self.tree.column("modified", width=140, minwidth=120, anchor=CENTER, stretch=False)
+        self.tree.column("path", width=400, minwidth=200)
+        self.tree.column("hash", width=280, minwidth=200)
 
         sb = _ttk.Scrollbar(lf, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=sb.set)
@@ -243,6 +260,9 @@ class DuplicateCleanerGUI:
         self.context_menu.add_command(label="📁 打开所在目录", command=self._open_folder)
         self.context_menu.add_separator()
         self.context_menu.add_command(label="📋 复制路径", command=self._copy_path)
+        self.context_menu.add_command(label="📋 复制文件名", command=self._copy_filename)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="ℹ️ 文件属性", command=self._show_file_properties)
 
         # 标签样式
         self.tree.tag_configure("original", background="#e8f5e9", foreground="#2e7d32")
@@ -255,6 +275,59 @@ class DuplicateCleanerGUI:
         self.root.bind("<Control-q>", lambda e: self._on_close())
         self.root.bind("<F1>", lambda e: self._show_help())
         self.root.bind("<F5>", lambda e: self._start_scan())
+
+        # 拖放支持
+        self._setup_drag_drop()
+
+    def _setup_drag_drop(self):
+        """设置拖放支持"""
+        try:
+            # 尝试使用 tkinterdnd2
+            dnd = _init_tkdnd()
+            if dnd and hasattr(self.root, 'drop_target_register'):
+                self.root.drop_target_register(dnd.DND_FILES)
+                self.root.dnd_bind('<<Drop>>', self._on_drop)
+                logger.info("拖放支持已启用 (tkinterdnd2)")
+                return
+        except Exception as e:
+            logger.debug(f"tkinterdnd2 不可用: {e}")
+
+        # 回退：使用 Windows 原生拖放
+        if sys.platform == 'win32':
+            try:
+                self.root.bind('<Drop>', self._on_drop_windows)
+                logger.info("拖放支持已启用 (Windows 原生)")
+            except Exception:
+                logger.info("拖放支持不可用")
+        else:
+            logger.info("拖放支持不可用")
+
+    def _on_drop(self, event):
+        """处理拖放事件（tkinterdnd2）"""
+        try:
+            path = event.data.strip('{}')
+            if os.path.isdir(path):
+                self.dir_var.set(path)
+                logger.info(f"拖放目录: {path}")
+            elif os.path.isfile(path):
+                self.dir_var.set(str(Path(path).parent))
+                logger.info(f"拖放文件，使用父目录: {Path(path).parent}")
+        except Exception as e:
+            logger.error(f"处理拖放失败: {e}")
+
+    def _on_drop_windows(self, event):
+        """处理拖放事件（Windows 原生）"""
+        try:
+            # 从事件中获取文件路径
+            path = event.data
+            if path:
+                path = path.strip('{}')
+                if os.path.isdir(path):
+                    self.dir_var.set(path)
+                elif os.path.isfile(path):
+                    self.dir_var.set(str(Path(path).parent))
+        except Exception as e:
+            logger.error(f"处理拖放失败: {e}")
 
     def _create_menu(self):
         """创建菜单栏"""
@@ -485,7 +558,12 @@ class DuplicateCleanerGUI:
         for i, (h, files, size) in enumerate(result.duplicates, 1):
             for j, fp in enumerate(files):
                 tag = "original" if j == 0 else "duplicate"
-                self.tree.insert("", END, values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), fp, h), tags=(tag,))
+                # 获取文件修改时间
+                try:
+                    mtime = datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%Y-%m-%d %H:%M")
+                except (OSError, ValueError):
+                    mtime = "-"
+                self.tree.insert("", END, values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h), tags=(tag,))
         self.tree.configure(selectmode="extended")
 
         self._select_second()
@@ -507,7 +585,8 @@ class DuplicateCleanerGUI:
             return
         for item in self.tree.get_children():
             v = self.tree.item(item, "values")
-            if kw in str(v[3]).lower() or kw in str(v[4]).lower():
+            # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
+            if kw in str(v[4]).lower() or kw in str(v[5]).lower():
                 self.tree.reattach(item, "", END)
             else:
                 self.tree.detach(item)
@@ -548,7 +627,8 @@ class DuplicateCleanerGUI:
         row = self.tree.identify_row(event.y)
         if not row or col != "#1":
             return
-        fp = self.tree.item(row, "values")[3]
+        # path 在第 4 列（索引 4）
+        fp = self.tree.item(row, "values")[4]
         if fp in self.selected_files:
             self.selected_files.discard(fp)
             self.tree.set(row, "select", "☐")
@@ -574,14 +654,16 @@ class DuplicateCleanerGUI:
         if not row:
             return None
         v = self.tree.item(row, "values")
-        return v[3] if v else None
+        # path 在第 4 列（索引 4）
+        return v[4] if v and len(v) > 4 else None
 
     def _get_selected_filepath(self):
         sel = self.tree.selection()
         if not sel:
             return None
         v = self.tree.item(sel[0], "values")
-        return v[3] if v else None
+        # path 在第 4 列（索引 4）
+        return v[4] if v and len(v) > 4 else None
 
     def _open_file(self):
         fp = self._get_selected_filepath()
@@ -599,6 +681,47 @@ class DuplicateCleanerGUI:
             self.root.clipboard_clear()
             self.root.clipboard_append(fp)
             self._update_status("📋 已复制路径")
+
+    def _copy_filename(self):
+        """复制文件名到剪贴板"""
+        fp = self._get_selected_filepath()
+        if fp:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(Path(fp).name)
+            self._update_status("📋 已复制文件名")
+
+    def _show_file_properties(self):
+        """显示文件属性对话框"""
+        fp = self._get_selected_filepath()
+        if not fp:
+            return
+
+        try:
+            stat = os.stat(fp)
+            size = format_size(stat.st_size)
+            mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            ctime = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
+            atime = datetime.fromtimestamp(stat.st_atime).strftime("%Y-%m-%d %H:%M:%S")
+
+            props = f"""文件属性
+
+路径: {fp}
+文件名: {Path(fp).name}
+扩展名: {Path(fp).suffix}
+
+大小: {size} ({stat.st_size:,} 字节)
+
+创建时间: {ctime}
+修改时间: {mtime}
+访问时间: {atime}
+
+只读: {'是' if not os.access(fp, os.WRITE) else '否'}
+隐藏: {'是' if Path(fp).name.startswith('.') else '否'}"""
+
+            messagebox.showinfo("文件属性", props)
+
+        except OSError as e:
+            messagebox.showerror("错误", f"无法获取文件属性: {e}")
 
     def _open_file_path(self, fp):
         try:
@@ -650,7 +773,8 @@ class DuplicateCleanerGUI:
             for _, files, _ in self.scan_result.duplicates:
                 orig.add(files[0])
         for item in self.tree.get_children():
-            fp = self.tree.item(item, "values")[3]
+            # path 在第 4 列（索引 4）
+            fp = self.tree.item(item, "values")[4]
             self.tree.set(item, "select", "☑" if fp in self.selected_files else ("⬜" if fp in orig else "☐"))
 
     # ==================== 删除 ====================
