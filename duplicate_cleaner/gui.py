@@ -690,10 +690,19 @@ class DuplicateCleanerGUI:
 
     def _show_file_properties(self):
         """显示文件属性对话框"""
-        fp = self._get_selected_filepath()
-        if not fp:
+        # 获取选中的文件路径
+        sel = self.tree.selection()
+        if not sel:
             messagebox.showwarning("提示", "请先选择一个文件", parent=self.root)
             return
+
+        item = sel[0]
+        values = self.tree.item(item, "values")
+        if not values or len(values) < 5:
+            messagebox.showwarning("提示", "无法获取文件信息", parent=self.root)
+            return
+
+        fp = values[4]  # path 在第 4 列
 
         try:
             stat = os.stat(fp)
@@ -720,7 +729,7 @@ class DuplicateCleanerGUI:
             messagebox.showinfo("文件属性", props, parent=self.root)
 
         except OSError as e:
-            messagebox.showerror("错误", f"无法获取文件属性: {e}", parent=self.root)
+            messagebox.showerror("错误", f"无法获取文件属性:\n{e}", parent=self.root)
 
     def _open_file_path(self, fp):
         try:
