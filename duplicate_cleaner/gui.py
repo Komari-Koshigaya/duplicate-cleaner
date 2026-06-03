@@ -159,6 +159,10 @@ class DuplicateCleanerGUI:
 
         self.delete_btn = _ttk.Button(bf, text="🗑️ 删除选中", command=self._delete_selected, state=DISABLED, bootstyle="danger" if _has_bootstrap else None)
         self.delete_btn.pack(side=RIGHT, padx=(8, 0))
+
+        self.move_btn = _ttk.Button(bf, text="📁 移动到文件夹", command=self._move_to_folder, state=DISABLED, bootstyle="warning" if _has_bootstrap else None)
+        self.move_btn.pack(side=RIGHT, padx=2)
+
         _ttk.Button(bf, text="取消选择", command=self._clear_selection).pack(side=RIGHT, padx=2)
         _ttk.Button(bf, text="反选", command=self._invert_selection).pack(side=RIGHT, padx=2)
         _ttk.Button(bf, text="全选重复", command=self._select_second).pack(side=RIGHT, padx=2)
@@ -579,6 +583,7 @@ class DuplicateCleanerGUI:
         self.scan_btn.configure(state=DISABLED)
         self.cancel_btn.configure(state=NORMAL)
         self.delete_btn.configure(state=DISABLED)
+        self.move_btn.configure(state=DISABLED)
         self.tree.delete(*self.tree.get_children())
         self.selected_files.clear()
         self.scan_result = None
@@ -630,6 +635,7 @@ class DuplicateCleanerGUI:
         self.cancel_btn.configure(state=DISABLED)
         if not self.scan_result or not self.scan_result.duplicates:
             self.delete_btn.configure(state=DISABLED)
+            self.move_btn.configure(state=DISABLED)
 
     def _display_results(self, result):
         self.scan_result = result
@@ -664,6 +670,7 @@ class DuplicateCleanerGUI:
         self._select_second()
         self.info_var.set(f"📊 共 {len(result.duplicates)} 组重复，{result.total_duplicates} 个文件，可释放 {format_size(result.total_wasted)}")
         self.delete_btn.configure(state=NORMAL)
+        self.move_btn.configure(state=NORMAL)
 
     # ==================== 结果操作 ====================
 
@@ -905,7 +912,64 @@ class DuplicateCleanerGUI:
             fp = self.tree.item(item, "values")[4]
             self.tree.set(item, "select", "☑" if fp in self.selected_files else ("⬜" if fp in orig else "☐"))
 
-    # ==================== 删除 ====================
+    # ==================== 移动和删除 ====================
+
+    def _move_to_folder(self):
+        """将选中的重复文件移动到指定文件夹"""
+        if not self.selected_files:
+            messagebox.showinfo("提示", "请先选择要移动的文件")
+            return
+
+        # 选择目标文件夹
+        target_dir = filedialog.askdirectory(title="选择目标文件夹")
+        if not target_dir:
+            return
+
+        files_list = sorted(self.selected_files)
+        count = len(files_list)
+
+        # 确认移动
+        if not messagebox.askyesno(
+            "确认移动",
+            f"确定要将 {count} 个文件移动到:\n{target_dir}\n\n移动后原位置的文件将被删除"
+        ):
+            return
+
+        success = 0
+        failed = 0
+        errors = []
+
+        for filepath in files_list:
+            try:
+                filename = Path(filepath).name
+                target_path = Path(target_dir) / filename
+
+                # 如果目标已存在，添加数字后缀
+                if target_path.exists():
+                    stem = Path(filepath).stem
+                    suffix = Path(filepath).suffix
+                    counter = 1
+                    while target_path.exists():
+                        target_path = Path(target_dir) / f"{stem}_{counter}{suffix}"
+                        counter += 1
+
+                # 移动文件
+                import shutil
+                shutil.move(filepath, str(target_path))
+                success += 1
+            except Exception as e:
+                failed += 1
+                errors.append(f"{Path(filepath).name}: {e}")
+                logger.error(f"移动文件失败: {filepath} - {e}")
+
+        result_msg = f"✅ 移动完成\n\n成功: {success} 个\n失败: {failed} 个"
+        if errors:
+            result_msg += "\n\n❌ 失败:\n" + "\n".join(errors[:5])
+
+        messagebox.showinfo("完成", result_msg)
+
+        if success > 0:
+            self._start_scan()
 
     def _delete_selected(self):
         if not self.selected_files:
