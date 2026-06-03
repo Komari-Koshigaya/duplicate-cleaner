@@ -550,15 +550,12 @@ class DuplicateCleanerGUI:
                         foreground=fg)
 
         # Progressbar
-        style.configure("TProgressbar",
-                        background=accent,
-                        troughcolor=field_bg)
-
-        # Scrollbar
-        style.configure("TScrollbar",
-                        background=button_bg,
-                        troughcolor=field_bg,
-                        arrowcolor=fg)
+        try:
+            style.configure("TProgressbar",
+                            background=accent,
+                            troughcolor=field_bg)
+        except Exception:
+            pass
 
         # 更新标签颜色
         if self.dark_mode_var.get():
