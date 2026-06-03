@@ -410,6 +410,10 @@ class DuplicateCleanerGUI:
         self.recursive_var.set(self.config.recursive)
         self.min_size_var.set(self.config.min_size)
 
+        # 应用窗口大小
+        if self.config.window_size and self.config.window_size != "中":
+            self._change_window_size(self.config.window_size)
+
         # 应用深色模式
         if self.config.dark_mode:
             self.dark_mode_var.set(True)
@@ -472,6 +476,8 @@ class DuplicateCleanerGUI:
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         self.root.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+        # 更新配置
+        self.config.window_size = size
 
     def _change_font_size(self, size):
         c = FONT_SIZES.get(size, FONT_SIZES["中"])
