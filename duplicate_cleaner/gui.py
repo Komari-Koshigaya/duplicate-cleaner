@@ -645,11 +645,7 @@ class DuplicateCleanerGUI:
         row = self.tree.identify_row(event.y)
         if row:
             self.tree.selection_set(row)
-            # 确保选中后再获取路径
-            self.root.update_idletasks()
-            fp = self._get_clicked_filepath(event)
-            if fp:
-                self.context_menu.post(event.x_root, event.y_root)
+            self.context_menu.post(event.x_root, event.y_root)
 
     def _get_clicked_filepath(self, event):
         row = self.tree.identify_row(event.y)
