@@ -29,7 +29,7 @@ class TestAppConfig:
         """测试默认配置值"""
         config = AppConfig()
         assert config.font_size == "中"
-        assert config.window_size == "中"
+        assert config.window_size == "大"
         assert config.sound_enabled is False
         assert config.last_dir == ""
         assert config.recent_dirs == []
@@ -67,7 +67,7 @@ class TestAppConfig:
         temp_config_dir.write_text('{"font_size": "大"}', encoding='utf-8')
         config = AppConfig.load()
         assert config.font_size == "大"
-        assert config.window_size == "中"  # 使用默认值
+        assert config.window_size == "大"  # 使用默认值
 
     def test_save_creates_directory(self, tmp_path):
         """测试保存时自动创建目录"""
@@ -142,8 +142,8 @@ class TestAppConfig:
         config = AppConfig()
         config.window_size = "大"
         w, h = config.get_window_size()
-        assert w == 1600
-        assert h == 1000
+        assert w == 1700
+        assert h == 1100
 
     def test_validate_valid(self):
         """测试验证有效配置"""
@@ -165,7 +165,7 @@ class TestAppConfig:
         config.window_size = "无效"
         warnings = config.validate()
         assert len(warnings) > 0
-        assert config.window_size == "中"
+        assert config.window_size == "大"
 
     def test_validate_invalid_min_size(self):
         """测试验证无效最小文件大小"""

@@ -12,7 +12,7 @@ import logging
 import subprocess
 import tkinter as tk
 from tkinter import messagebox, filedialog, constants
-from typing import Optional
+from typing import Optional, Dict, Tuple
 from pathlib import Path
 from datetime import datetime
 
@@ -22,6 +22,83 @@ from .scanner import FileScanner, ScanResult
 from .utils import format_size, is_send2trash_available, get_lock_file
 
 logger = logging.getLogger("duplicate_cleaner")
+
+# 图标缓存
+_icon_cache: Dict[str, tk.PhotoImage] = {}
+
+
+def _get_file_icon(filepath: str) -> Optional[tk.PhotoImage]:
+    """
+    获取文件类型图标
+
+    Args:
+        filepath: 文件路径
+
+    Returns:
+        PhotoImage 图标对象，失败返回 None
+    """
+    ext = Path(filepath).suffix.lower()
+
+    # 检查缓存
+    if ext in _icon_cache:
+        return _icon_cache[ext]
+
+    try:
+        from PIL import Image, ImageDraw
+
+        # 创建简单的文件类型图标
+        size = 16
+        img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        # 根据扩展名选择颜色
+        color_map = {
+            # 图片
+            '.jpg': '#e91e63', '.jpeg': '#e91e63', '.png': '#e91e63',
+            '.gif': '#e91e63', '.bmp': '#e91e63', '.webp': '#e91e63',
+            '.svg': '#e91e63', '.ico': '#e91e63', '.tiff': '#e91e63',
+            # 视频
+            '.mp4': '#9c27b0', '.avi': '#9c27b0', '.mkv': '#9c27b0',
+            '.mov': '#9c27b0', '.wmv': '#9c27b0', '.flv': '#9c27b0',
+            # 音频
+            '.mp3': '#ff9800', '.wav': '#ff9800', '.flac': '#ff9800',
+            '.aac': '#ff9800', '.ogg': '#ff9800', '.wma': '#ff9800',
+            # 文档
+            '.doc': '#2196f3', '.docx': '#2196f3', '.pdf': '#f44336',
+            '.txt': '#607d8b', '.xls': '#4caf50', '.xlsx': '#4caf50',
+            '.ppt': '#ff5722', '.pptx': '#ff5722', '.csv': '#4caf50',
+            # 压缩包
+            '.zip': '#795548', '.rar': '#795548', '.7z': '#795548',
+            '.tar': '#795548', '.gz': '#795548',
+            # 代码
+            '.py': '#3f51b5', '.js': '#ffc107', '.html': '#e91e63',
+            '.css': '#2196f3', '.java': '#f44336', '.cpp': '#607d8b',
+            '.c': '#607d8b', '.h': '#607d8b',
+        }
+
+        color = color_map.get(ext, '#9e9e9e')  # 默认灰色
+
+        # 绘制文件图标
+        # 文件背景
+        draw.rectangle([2, 0, 13, 15], fill='white', outline='#bdbdbd')
+        # 折角
+        draw.polygon([(10, 0), (13, 3), (10, 3)], fill='#bdbdbd')
+        # 文件类型颜色条
+        draw.rectangle([3, 4, 12, 6], fill=color)
+
+        # 转换为 PhotoImage
+        from io import BytesIO
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        photo = tk.PhotoImage(data=buffer.getvalue())
+
+        # 缓存
+        _icon_cache[ext] = photo
+        return photo
+
+    except Exception:
+        return None
 
 # tkinter 常量
 BOTH = constants.BOTH
@@ -234,24 +311,30 @@ class DuplicateCleanerGUI:
         _ttk.Entry(sf, textvariable=self.search_var).pack(side=LEFT, fill=X, expand=True, padx=(5, 10))
         _ttk.Label(sf, text="输入关键词过滤结果", foreground="gray").pack(side=LEFT)
 
-        # Treeview（添加修改时间列）
+        # Treeview（添加图标列和修改时间列）
         lf = _ttk.Frame(outer, padding=8)
         lf.pack(fill=BOTH, expand=True)
 
+        # 使用 tree 模式显示图标
         cols = ("select", "group", "size", "modified", "path", "hash")
-        self.tree = _ttk.Treeview(lf, columns=cols, show="headings", selectmode="extended")
+        self.tree = _ttk.Treeview(lf, columns=cols, selectmode="extended")
+        self.tree.heading("#0", text="类型", anchor=CENTER)  # 图标列
         self.tree.heading("select", text="✓", anchor=CENTER)
         self.tree.heading("group", text="组号 ↕", anchor=CENTER, command=lambda: self._sort_tree("group"))
         self.tree.heading("size", text="大小 ↕", anchor=E, command=lambda: self._sort_tree("size"))
         self.tree.heading("modified", text="修改时间 ↕", anchor=CENTER, command=lambda: self._sort_tree("modified"))
         self.tree.heading("path", text="文件路径 ↕", anchor=W, command=lambda: self._sort_tree("path"))
         self.tree.heading("hash", text="哈希值", anchor=W)
+        self.tree.column("#0", width=30, minwidth=30, stretch=False)  # 图标列
         self.tree.column("select", width=40, minwidth=40, anchor=CENTER, stretch=False)
         self.tree.column("group", width=60, minwidth=50, anchor=CENTER, stretch=False)
         self.tree.column("size", width=90, minwidth=70, anchor=E, stretch=False)
         self.tree.column("modified", width=140, minwidth=120, anchor=CENTER, stretch=False)
         self.tree.column("path", width=400, minwidth=200)
         self.tree.column("hash", width=280, minwidth=200)
+
+        # 图标集合
+        self.tree_icons = {}
 
         sb = _ttk.Scrollbar(lf, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=sb.set)
@@ -706,7 +789,15 @@ class DuplicateCleanerGUI:
                     mtime = datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%Y-%m-%d %H:%M")
                 except (OSError, ValueError):
                     mtime = "-"
-                item_id = self.tree.insert("", END, values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h), tags=(tag,))
+                # 获取文件图标
+                icon = _get_file_icon(fp)
+                item_id = self.tree.insert(
+                    "", END,
+                    text="",  # 图标列文本
+                    image=icon,  # 图标
+                    values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h),
+                    tags=(tag,)
+                )
                 self._all_tree_items.append(item_id)
         self.tree.configure(selectmode="extended")
 
@@ -1276,6 +1367,87 @@ class DuplicateCleanerGUI:
         tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(20, 0))
         tk.Label(frame, text="作者: Kanji", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(5, 0))
 
+    # ==================== 系统托盘 ====================
+
+    def _setup_system_tray(self):
+        """设置系统托盘"""
+        try:
+            import pystray
+            from PIL import Image, ImageDraw
+
+            # 创建托盘图标
+            icon_size = 64
+            img = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            # 绘制一个简单的图标
+            draw.rectangle([8, 8, 56, 56], fill='#2196f3', outline='#1976d2')
+            draw.text((16, 16), "DC", fill='white')
+
+            # 创建托盘菜单
+            menu = pystray.Menu(
+                pystray.MenuItem('显示主窗口', self._restore_from_tray, default=True),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem('退出', self._quit_from_tray)
+            )
+
+            # 创建托盘图标
+            self._tray_icon = pystray.Icon(
+                "duplicate_cleaner",
+                img,
+                "Duplicate Cleaner",
+                menu
+            )
+
+            # 绑定最小化事件
+            self.root.protocol('WM_DELETE_WINDOW', self._on_window_close)
+
+            # 在后台线程运行托盘
+            import threading
+            tray_thread = threading.Thread(target=self._tray_icon.run, daemon=True)
+            tray_thread.start()
+
+            logger.info("系统托盘已启用")
+            return True
+
+        except ImportError:
+            logger.info("pystray 未安装，系统托盘不可用")
+            return False
+        except Exception as e:
+            logger.error(f"系统托盘初始化失败: {e}")
+            return False
+
+    def _on_window_close(self):
+        """窗口关闭事件"""
+        if hasattr(self, '_tray_icon') and self._tray_icon:
+            # 最小化到托盘
+            self._minimize_to_tray()
+        else:
+            # 正常关闭
+            self._on_close()
+
+    def _minimize_to_tray(self):
+        """最小化到系统托盘"""
+        self.root.withdraw()  # 隐藏窗口
+        logger.info("已最小化到系统托盘")
+
+    def _restore_from_tray(self, icon=None, item=None):
+        """从托盘恢复窗口"""
+        self.root.after(0, self._do_restore)
+
+    def _do_restore(self):
+        """在主线程中恢复窗口"""
+        self.root.deiconify()  # 显示窗口
+        self.root.lift()  # 置顶
+        self.root.focus_force()  # 获取焦点
+        logger.info("已从系统托盘恢复")
+
+    def _quit_from_tray(self, icon=None, item=None):
+        """从托盘退出"""
+        if hasattr(self, '_tray_icon') and self._tray_icon:
+            self._tray_icon.stop()
+        self.root.after(0, self._on_close)
+
     # ==================== 工具 ====================
 
     def _update_status(self, text):
@@ -1291,7 +1463,11 @@ def main():
     else:
         root = tk.Tk()
 
-    DuplicateCleanerGUI(root)
+    app = DuplicateCleanerGUI(root)
+
+    # 设置系统托盘
+    app._setup_system_tray()
+
     root.mainloop()
 
 
