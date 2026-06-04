@@ -876,6 +876,7 @@ class DuplicateCleanerGUI:
     # ==================== 扫描 ====================
 
     def _start_scan(self):
+        import time
         d = self.dir_var.get().strip()
         if not d or not os.path.isdir(d):
             messagebox.showerror("错误", "请选择有效的目录")
@@ -884,6 +885,7 @@ class DuplicateCleanerGUI:
             return
 
         self.scanning = True
+        self._scan_start_time = time.time()  # 记录扫描开始时间
         self.scan_btn.configure(state=DISABLED)
         self.cancel_btn.configure(state=NORMAL)
         self.delete_btn.configure(state=DISABLED)
@@ -950,8 +952,12 @@ class DuplicateCleanerGUI:
         self.tree.delete(*self.tree.get_children())
         self.selected_files.clear()
 
+        # 计算扫描耗时
+        import time
+        scan_time = time.time() - self._scan_start_time if hasattr(self, '_scan_start_time') else 0
+
         if not result.duplicates:
-            self.info_var.set("✨ 未发现重复文件")
+            self.info_var.set(f"✨ 未发现重复文件 (耗时 {scan_time:.1f}秒)")
             self._update_status("✅ 扫描完成，未发现重复文件")
             self.progress_var.set(100)
             if self.sound_var.get():
@@ -986,7 +992,10 @@ class DuplicateCleanerGUI:
         self.tree.configure(selectmode="extended")
 
         self._select_second()
-        self.info_var.set(f"📊 共 {len(result.duplicates)} 组重复，{result.total_duplicates} 个文件，可释放 {format_size(result.total_wasted)}")
+        self.info_var.set(
+            f"📊 共 {len(result.duplicates)} 组重复，{result.total_duplicates} 个文件，"
+            f"可释放 {format_size(result.total_wasted)}  |  耗时 {scan_time:.1f}秒"
+        )
         self.delete_btn.configure(state=NORMAL)
         self.move_btn.configure(state=NORMAL)
 
