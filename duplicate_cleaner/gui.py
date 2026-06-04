@@ -586,11 +586,17 @@ class DuplicateCleanerGUI:
             self.tree.tag_configure("duplicate", background="#fff8e1", foreground="#f57f17")
 
     def _focus_search(self):
+        """聚焦搜索框并执行搜索"""
+        # 先执行搜索
+        self._do_search()
+
+        # 然后聚焦搜索框
         def find(w):
             if isinstance(w, _ttk.Entry):
                 try:
                     if str(w.cget("textvariable")) == str(self.search_var):
                         w.focus_set()
+                        w.select_range(0, END)  # 选中所有文本
                         return True
                 except Exception:
                     pass
