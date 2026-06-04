@@ -35,6 +35,9 @@ FULL_HASH_CHUNK_SIZE = 131072
 DEFAULT_QUICK_HASH_WORKERS = 8
 DEFAULT_FULL_HASH_WORKERS = 4
 
+# 硬盘类型缓存 {盘符: 类型}
+_disk_type_cache: Dict[str, str] = {}
+
 
 def detect_disk_type(path: str) -> str:
     """
@@ -48,11 +51,14 @@ def detect_disk_type(path: str) -> str:
         "hdd" - 机械硬盘
         "unknown" - 未知
     """
+    # 检查缓存
+    drive = Path(path).drive or "C:"
+    if drive in _disk_type_cache:
+        return _disk_type_cache[drive]
+
     try:
         if sys.platform == 'win32':
             # Windows: 使用 fsutil 命令检测
-            # 获取盘符
-            drive = Path(path).drive or "C:"
             drive_letter = drive[0]
 
             # 尝试通过 PowerShell 检测
@@ -64,14 +70,18 @@ def detect_disk_type(path: str) -> str:
                 )
                 media_type = result.stdout.strip().lower()
                 if "ssd" in media_type or "solid" in media_type:
+                    _disk_type_cache[drive] = "ssd"
                     return "ssd"
                 elif "hdd" in media_type or "hard" in media_type:
+                    _disk_type_cache[drive] = "hdd"
                     return "hdd"
             except Exception:
                 pass
 
             # 备用方案：通过随机读取性能测试
-            return _benchmark_disk(path)
+            result = _benchmark_disk(path)
+            _disk_type_cache[drive] = result
+            return result
 
         elif sys.platform == 'darwin':
             # macOS: 检查是否为 SSD
@@ -81,8 +91,10 @@ def detect_disk_type(path: str) -> str:
                     capture_output=True, text=True, timeout=5
                 )
                 if "Solid State" in result.stdout:
+                    _disk_type_cache[drive] = "ssd"
                     return "ssd"
                 elif "Rotational" in result.stdout:
+                    _disk_type_cache[drive] = "hdd"
                     return "hdd"
             except Exception:
                 pass
@@ -102,13 +114,16 @@ def detect_disk_type(path: str) -> str:
                 if os.path.exists(rotational_path):
                     with open(rotational_path, 'r') as f:
                         rotational = f.read().strip()
-                    return "hdd" if rotational == "1" else "ssd"
+                    disk_type = "hdd" if rotational == "1" else "ssd"
+                    _disk_type_cache[drive] = disk_type
+                    return disk_type
             except Exception:
                 pass
 
     except Exception as e:
         logger.debug(f"硬盘类型检测失败: {e}")
 
+    _disk_type_cache[drive] = "unknown"
     return "unknown"
 
 

@@ -454,13 +454,13 @@ class DuplicateCleanerGUI:
     def _on_close(self):
         """关闭窗口"""
         self._save_config()
-        if not self.config.single_instance:
-            try:
-                lf = get_lock_file()
-                if lf.exists():
-                    lf.unlink()
-            except OSError:
-                pass
+        # 无论单实例模式如何，关闭时都删除锁文件
+        try:
+            lf = get_lock_file()
+            if lf.exists():
+                lf.unlink()
+        except OSError:
+            pass
         self.root.destroy()
 
     def _on_single_instance_change(self):
