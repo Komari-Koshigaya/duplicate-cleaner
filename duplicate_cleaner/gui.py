@@ -796,8 +796,9 @@ class DuplicateCleanerGUI:
         text_widget.pack(fill=BOTH, expand=True)
         scrollbar.config(command=text_widget.yview)
 
-        # 插入当前排除目录
-        text_widget.insert(tk.END, "\n".join(self.config.exclude_dirs))
+        # 插入当前排除目录（如果为空则使用默认值）
+        exclude_dirs = self.config.exclude_dirs if self.config.exclude_dirs else DEFAULT_EXCLUDE_DIRS
+        text_widget.insert(tk.END, "\n".join(exclude_dirs))
 
         # 按钮
         btn_frame = ttk.Frame(frame)
