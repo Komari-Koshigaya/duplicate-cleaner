@@ -724,26 +724,30 @@ class DuplicateCleanerGUI:
         kw = self.search_var.get().lower().strip()
 
         # 获取所有项目（包括被隐藏的）
-        all_items = self.tree.get_children("")
+        # 使用 get_children("") 获取所有子项
+        all_items = list(self.tree.get_children(""))
 
         if not kw:
             # 没有搜索关键词，显示所有
             for item in all_items:
-                self.tree.reattach(item, "", END)
+                if self.tree.parent(item) == "":  # 只处理顶级项
+                    self.tree.reattach(item, "", END)
             return
 
-        # 先显示所有，再过滤
+        # 先显示所有
         for item in all_items:
-            self.tree.reattach(item, "", END)
+            if self.tree.parent(item) == "":
+                self.tree.reattach(item, "", END)
 
         # 然后过滤
         for item in all_items:
-            v = self.tree.item(item, "values")
-            # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
-            if kw in str(v[4]).lower() or kw in str(v[5]).lower():
-                pass  # 保留
-            else:
-                self.tree.detach(item)
+            if self.tree.parent(item) == "":
+                v = self.tree.item(item, "values")
+                # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
+                if kw in str(v[4]).lower() or kw in str(v[5]).lower():
+                    pass  # 保留
+                else:
+                    self.tree.detach(item)
 
     def _sort_tree(self, col):
         if self.sort_column == col:
