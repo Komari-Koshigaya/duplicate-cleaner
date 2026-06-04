@@ -136,7 +136,8 @@ python build.py
 
 - Python 3.8+
 - tkinter + ttkbootstrap（GUI）
-- hashlib / threading / concurrent.futures
+- xxhash / hashlib（哈希算法，xxhash 比 MD5 快数倍）
+- threading / concurrent.futures（多线程）
 - send2trash（安全删除）
 - pystray（系统托盘）
 - Pillow（图标生成）

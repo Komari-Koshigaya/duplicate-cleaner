@@ -7,8 +7,10 @@
 核心算法：
 1. 按文件大小分组（大小不同的文件不可能重复）
 2. 快速哈希（读取文件头部 64KB）进一步筛选
-3. 对可疑文件计算完整 MD5 哈希确认
+3. 对可疑文件计算完整哈希确认
 4. 多线程并行计算提升性能（自适应硬盘类型）
+
+哈希算法优先级：xxhash > MD5
 """
 
 import os
@@ -37,6 +39,57 @@ DEFAULT_FULL_HASH_WORKERS = 4
 
 # 硬盘类型缓存 {盘符: 类型}
 _disk_type_cache: Dict[str, str] = {}
+
+# 哈希算法选择（xxhash 比 MD5 快数倍）
+_use_xxhash = False
+try:
+    import xxhash
+    _use_xxhash = True
+    logger.info("使用 xxhash 哈希算法（高性能）")
+except ImportError:
+    logger.info("xxhash 未安装，使用 MD5 哈希算法")
+
+
+def _hash_data(data: bytes) -> str:
+    """计算数据哈希"""
+    if _use_xxhash:
+        return xxhash.xxh64(data).hexdigest()
+    return hashlib.md5(data).hexdigest()
+
+
+def _hash_file(filepath: str, quick: bool = False) -> Optional[str]:
+    """
+    计算文件哈希
+
+    Args:
+        filepath: 文件路径
+        quick: True 只读取头部，False 读取完整文件
+
+    Returns:
+        哈希值字符串，失败返回 None
+    """
+    try:
+        if quick:
+            # 快速哈希：只读取头部
+            with open(filepath, 'rb') as f:
+                data = f.read(QUICK_HASH_SIZE)
+            return _hash_data(data)
+        else:
+            # 完整哈希：分块读取
+            if _use_xxhash:
+                h = xxhash.xxh64()
+            else:
+                h = hashlib.md5()
+            with open(filepath, 'rb') as f:
+                while True:
+                    chunk = f.read(FULL_HASH_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    h.update(chunk)
+            return h.hexdigest()
+    except (PermissionError, OSError) as e:
+        logger.warning(f"哈希计算失败: {filepath} - {e}")
+        return None
 
 
 def detect_disk_type(path: str) -> str:
@@ -466,13 +519,7 @@ class FileScanner:
 
         def calc_quick_hash(filepath: str) -> Tuple[str, Optional[str]]:
             """计算单个文件的快速哈希"""
-            try:
-                with open(filepath, 'rb') as f:
-                    data = f.read(QUICK_HASH_SIZE)
-                return filepath, hashlib.md5(data).hexdigest()
-            except (PermissionError, OSError) as e:
-                logger.warning(f"快速哈希失败: {filepath} - {e}")
-                return filepath, None
+            return filepath, _hash_file(filepath, quick=True)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(calc_quick_hash, f): f for f in files}
@@ -504,7 +551,7 @@ class FileScanner:
         max_workers: int = DEFAULT_FULL_HASH_WORKERS
     ) -> Dict[str, List[Tuple[str, int]]]:
         """
-        多线程计算文件完整 MD5 哈希
+        多线程计算文件完整哈希
 
         Args:
             files: 文件路径列表
@@ -520,18 +567,7 @@ class FileScanner:
 
         def calc_full_hash(filepath: str) -> Tuple[str, Optional[str]]:
             """计算单个文件的完整哈希"""
-            try:
-                md5 = hashlib.md5(usedforsecurity=False)
-                with open(filepath, 'rb') as f:
-                    while True:
-                        chunk = f.read(FULL_HASH_CHUNK_SIZE)
-                        if not chunk:
-                            break
-                        md5.update(chunk)
-                return filepath, md5.hexdigest()
-            except (PermissionError, OSError) as e:
-                logger.warning(f"完整哈希失败: {filepath} - {e}")
-                return filepath, None
+            return filepath, _hash_file(filepath, quick=False)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(calc_full_hash, f): f for f in files}

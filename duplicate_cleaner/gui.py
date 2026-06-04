@@ -506,6 +506,35 @@ class DuplicateCleanerGUI:
         vm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="视图", menu=vm)
 
+        # 主题选择（仅 ttkbootstrap 可用）
+        if _has_bootstrap:
+            self.theme_var = tk.StringVar(value=getattr(self.config, 'theme', 'litera'))
+            theme_menu = tk.Menu(vm, tearoff=0)
+            vm.add_cascade(label="🎨 主题", menu=theme_menu)
+            themes = [
+                ("litera", "Litera (默认)"),
+                ("cosmo", "Cosmo"),
+                ("flatly", "Flatly"),
+                ("journal", "Journal"),
+                ("lumen", "Lumen"),
+                ("minty", "Minty"),
+                ("pulse", "Pulse"),
+                ("sandstone", "Sandstone"),
+                ("united", "United"),
+                ("yeti", "Yeti"),
+                ("morph", "Morph"),
+                ("simplex", "Simplex"),
+                ("cerculean", "Cerulean"),
+            ]
+            for theme_id, theme_name in themes:
+                theme_menu.add_radiobutton(
+                    label=theme_name,
+                    variable=self.theme_var,
+                    value=theme_id,
+                    command=lambda t=theme_id: self._change_theme(t)
+                )
+            vm.add_separator()
+
         # 深色模式
         self.dark_mode_var = tk.BooleanVar(value=self.config.dark_mode)
         vm.add_checkbutton(label="🌙 深色模式", variable=self.dark_mode_var, command=self._toggle_dark_mode)
@@ -588,6 +617,17 @@ class DuplicateCleanerGUI:
             self.dark_mode_var.set(True)
             self._toggle_dark_mode()
 
+    def _change_theme(self, theme: str):
+        """切换主题"""
+        if _has_bootstrap:
+            try:
+                style = _ttk.Style()
+                style.theme_use(theme)
+                self.config.theme = theme
+                self._save_config()
+            except Exception as e:
+                logger.error(f"切换主题失败: {e}")
+
     # ==================== 配置 ====================
 
     def _save_config(self):
@@ -600,6 +640,8 @@ class DuplicateCleanerGUI:
         self.config.single_instance = self.single_instance_var.get()
         self.config.dark_mode = self.dark_mode_var.get()
         self.config.close_to_tray = self.close_to_tray_var.get()
+        if hasattr(self, 'theme_var'):
+            self.config.theme = self.theme_var.get()
         self.config.add_recent_dir(self.dir_var.get())
         self.config.save()
 
@@ -1553,6 +1595,32 @@ class DuplicateCleanerGUI:
         self.root.after(0, lambda: self.status_var.set(text))
 
 
+def _check_for_updates():
+    """检查是否有新版本"""
+    try:
+        import urllib.request
+        import json
+
+        # GitHub API 获取最新 release
+        url = "https://api.github.com/repos/Komari-Koshigaya/duplicate-cleaner/releases/latest"
+        req = urllib.request.Request(url, headers={"User-Agent": "DuplicateCleaner"})
+
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            latest_version = data.get("tag_name", "").lstrip("v")
+            download_url = data.get("html_url", "")
+
+            # 简单版本比较
+            current = list(map(int, __version__.split(".")))
+            latest = list(map(int, latest_version.split(".")))
+
+            if latest > current:
+                return latest_version, download_url
+    except Exception:
+        pass
+    return None, None
+
+
 def main():
     """GUI 主入口"""
     _init_ttk()
@@ -1575,7 +1643,28 @@ def main():
     root.lift()
     root.focus_force()
 
+    # 异步检查更新
+    def check_update():
+        new_version, url = _check_for_updates()
+        if new_version:
+            root.after(0, lambda: _show_update_dialog(root, new_version, url))
+
+    import threading
+    threading.Thread(target=check_update, daemon=True).start()
+
     root.mainloop()
+
+
+def _show_update_dialog(root, new_version, url):
+    """显示更新提示对话框"""
+    from tkinter import messagebox
+    result = messagebox.askyesno(
+        "发现新版本",
+        f"发现新版本 v{new_version}（当前 v{__version__}）\n\n是否前往下载？"
+    )
+    if result:
+        import webbrowser
+        webbrowser.open(url)
 
 
 if __name__ == "__main__":
