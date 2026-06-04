@@ -191,22 +191,22 @@ def get_optimal_workers(path: str, operation: str = "quick_hash") -> int:
     if operation == "quick_hash":
         # 快速哈希：IO 密集型，可以更多并发
         if disk_type == "ssd":
-            # SSD: 可以高并发
-            return min(cpu_count * 2, 16)
+            # SSD: 高并发，充分利用多核
+            return min(cpu_count * 4, 64)
         elif disk_type == "hdd":
             # HDD: 减少并发，避免磁头寻道
-            return min(4, cpu_count)
-        else:
-            # 未知：保守估计
             return min(8, cpu_count)
+        else:
+            # 未知：中等并发
+            return min(16, cpu_count * 2)
     else:
         # 完整哈希：CPU 和 IO 混合
         if disk_type == "ssd":
-            return min(cpu_count, 8)
+            return min(cpu_count * 2, 32)
         elif disk_type == "hdd":
-            return min(2, cpu_count)
-        else:
             return min(4, cpu_count)
+        else:
+            return min(8, cpu_count)
 
 
 @dataclass
