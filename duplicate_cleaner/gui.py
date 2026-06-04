@@ -385,13 +385,13 @@ class DuplicateCleanerGUI:
         self.tree.heading("modified", text="修改时间 ↕", anchor=CENTER, command=lambda: self._sort_tree("modified"))
         self.tree.heading("path", text="文件路径 ↕", anchor=W, command=lambda: self._sort_tree("path"))
         self.tree.heading("hash", text="哈希值", anchor=W)
-        self.tree.column("#0", width=50, minwidth=50, stretch=False)  # 图标列（增大）
-        self.tree.column("select", width=40, minwidth=40, anchor=CENTER, stretch=False)
-        self.tree.column("group", width=60, minwidth=50, anchor=CENTER, stretch=False)
-        self.tree.column("size", width=90, minwidth=70, anchor=E, stretch=False)
-        self.tree.column("modified", width=140, minwidth=120, anchor=CENTER, stretch=False)
-        self.tree.column("path", width=400, minwidth=200)
-        self.tree.column("hash", width=280, minwidth=200)
+        self.tree.column("#0", width=70, minwidth=60, stretch=False)  # 图标列
+        self.tree.column("select", width=50, minwidth=40, anchor=CENTER, stretch=False)
+        self.tree.column("group", width=80, minwidth=60, anchor=CENTER, stretch=False)
+        self.tree.column("size", width=110, minwidth=80, anchor=E, stretch=False)
+        self.tree.column("modified", width=160, minwidth=130, anchor=CENTER, stretch=False)
+        self.tree.column("path", width=450, minwidth=200)
+        self.tree.column("hash", width=300, minwidth=200)
 
         # 图标集合
         self.tree_icons = {}
@@ -1562,11 +1562,21 @@ def main():
     else:
         root = tk.Tk()
 
+    # 先隐藏窗口，避免白色闪屏
+    root.withdraw()
+
     app = DuplicateCleanerGUI(root)
 
     # 设置系统托盘
     app._setup_system_tray()
 
+    # 延迟显示窗口（等界面构建完成）
+    def _show_window():
+        root.deiconify()
+        root.lift()
+        root.focus_force()
+
+    root.after(150, _show_window)
     root.mainloop()
 
 
