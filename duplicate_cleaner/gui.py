@@ -198,11 +198,16 @@ class DuplicateCleanerGUI:
         self.root.title(f"Duplicate Cleaner v{__version__}")
         self.root.minsize(1000, 600)
 
-        # 设置窗口图标
+        # 设置窗口图标（包括任务栏）
         icon_path = _get_icon_path()
         if icon_path:
             try:
                 self.root.iconbitmap(str(icon_path))
+                # Windows 任务栏图标
+                if sys.platform == 'win32':
+                    import ctypes
+                    myappid = f'duplicate_cleaner.{__version__}'
+                    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
             except Exception as e:
                 logger.debug(f"设置窗口图标失败: {e}")
 
@@ -1412,21 +1417,29 @@ class DuplicateCleanerGUI:
         win.transient(self.root)
         win.grab_set()
 
+        # 设置图标
+        icon_path = _get_icon_path()
+        if icon_path:
+            try:
+                win.iconbitmap(str(icon_path))
+            except Exception:
+                pass
+
         # 居中显示
-        w, h = 650, 550
+        w, h = 700, 600
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = tk.Frame(win, padx=40, pady=30)
+        frame = tk.Frame(win, padx=50, pady=40)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 24, "bold")).pack(pady=(0, 15))
+        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 26, "bold")).pack(pady=(0, 20))
         tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 14)).pack()
-        tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别\n支持图形界面和命令行两种模式", font=("Microsoft YaHei UI", 12)).pack(pady=(10, 0))
-        tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(20, 0))
+        tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别\n支持图形界面和命令行两种模式", font=("Microsoft YaHei UI", 13)).pack(pady=(15, 0))
+        tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(25, 0))
         tk.Label(frame, text="作者: Kanji", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(5, 0))
         tk.Label(frame, text="GitHub: Komari-Koshigaya/duplicate-cleaner", font=("Microsoft YaHei UI", 10), fg="gray").pack(pady=(5, 0))
 
