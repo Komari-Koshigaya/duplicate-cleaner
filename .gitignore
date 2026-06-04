@@ -43,6 +43,9 @@ htmlcov/
 # PyInstaller
 *.spec
 
+# Logs
+logs/
+
 # App config (user-specific)
 .duplicate_cleaner_config.json
 .duplicate_cleaner.lock
