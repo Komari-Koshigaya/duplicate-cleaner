@@ -19,6 +19,33 @@ logger = logging.getLogger("duplicate_cleaner")
 # 默认配置值
 DEFAULT_FONT_SIZE = "中"
 DEFAULT_WINDOW_SIZE = "大"
+
+# 默认排除目录列表
+DEFAULT_EXCLUDE_DIRS = [
+    "node_modules",
+    ".git",
+    ".svn",
+    ".hg",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "venv",
+    "env",
+    ".env",
+    "dist",
+    "build",
+    ".next",
+    ".nuxt",
+    "target",
+    ".idea",
+    ".vscode",
+    ".DS_Store",
+    "Thumbs.db",
+    "$RECYCLE.BIN",
+    "System Volume Information",
+]
 DEFAULT_SOUND_ENABLED = False
 DEFAULT_RECURSIVE = True
 DEFAULT_MIN_SIZE = "0"
@@ -72,6 +99,7 @@ class AppConfig:
         dark_mode: 是否深色模式
         close_to_tray: 关闭时是否最小化到托盘
         theme: 主题名称
+        exclude_dirs: 排除的目录名列表
     """
     font_size: str = DEFAULT_FONT_SIZE
     window_size: str = DEFAULT_WINDOW_SIZE
@@ -85,7 +113,7 @@ class AppConfig:
     dark_mode: bool = False
     close_to_tray: bool = True
     theme: str = "litera"
-    close_to_tray: bool = True
+    exclude_dirs: List[str] = field(default_factory=lambda: DEFAULT_EXCLUDE_DIRS.copy())
 
     def save(self) -> bool:
         """
@@ -111,6 +139,7 @@ class AppConfig:
                 "dark_mode": self.dark_mode,
                 "close_to_tray": self.close_to_tray,
                 "theme": self.theme,
+                "exclude_dirs": self.exclude_dirs,
             }
 
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -156,6 +185,7 @@ class AppConfig:
                 dark_mode=data.get("dark_mode", False),
                 close_to_tray=data.get("close_to_tray", True),
                 theme=data.get("theme", "litera"),
+                exclude_dirs=data.get("exclude_dirs", DEFAULT_EXCLUDE_DIRS.copy()),
             )
 
             logger.debug(f"配置已加载: {config_file}")
