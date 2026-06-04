@@ -590,6 +590,8 @@ class DuplicateCleanerGUI:
             variable=self.close_to_tray_var,
             command=self._on_close_to_tray_change
         )
+        sm.add_separator()
+        sm.add_command(label="📁 排除目录设置...", command=self._show_exclude_dirs_dialog)
 
         # 设置 - 配置备份和恢复
         sm.add_separator()
@@ -748,6 +750,73 @@ class DuplicateCleanerGUI:
         self._save_config()
         status = "开启" if self.close_to_tray_var.get() else "关闭"
         messagebox.showinfo("设置", f"关闭时最小化到托盘已{status}")
+
+    def _show_exclude_dirs_dialog(self):
+        """显示排除目录设置对话框"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("排除目录设置")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # 设置图标
+        icon_path = _get_icon_path()
+        if icon_path:
+            try:
+                dialog.iconbitmap(str(icon_path))
+            except Exception:
+                pass
+
+        # 居中显示
+        w, h = 500, 550
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        dialog.geometry(f"{w}x{h}+{x}+{y}")
+
+        frame = ttk.Frame(dialog, padding=15)
+        frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(frame, text="📁 排除目录设置", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=W, pady=(0, 10))
+        ttk.Label(frame, text="以下目录名在扫描时会被跳过（每行一个）：", foreground="gray").pack(anchor=W, pady=(0, 10))
+
+        # 文本框
+        text_frame = ttk.Frame(frame)
+        text_frame.pack(fill=BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(text_frame)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        text_widget = tk.Text(
+            text_frame,
+            wrap=tk.WORD,
+            font=("Consolas", 11),
+            yscrollcommand=scrollbar.set
+        )
+        text_widget.pack(fill=BOTH, expand=True)
+        scrollbar.config(command=text_widget.yview)
+
+        # 插入当前排除目录
+        text_widget.insert(tk.END, "\n".join(self.config.exclude_dirs))
+
+        # 按钮
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(fill=X, pady=(10, 0))
+
+        def reset_to_default():
+            text_widget.delete("1.0", tk.END)
+            text_widget.insert(tk.END, "\n".join(DEFAULT_EXCLUDE_DIRS))
+
+        def save_and_close():
+            content = text_widget.get("1.0", tk.END).strip()
+            self.config.exclude_dirs = [d.strip() for d in content.split("\n") if d.strip()]
+            self._save_config()
+            dialog.destroy()
+            messagebox.showinfo("保存成功", "排除目录已更新")
+
+        ttk.Button(btn_frame, text="恢复默认", command=reset_to_default).pack(side=LEFT)
+        ttk.Button(btn_frame, text="保存", command=save_and_close).pack(side=RIGHT, padx=(5, 0))
+        ttk.Button(btn_frame, text="取消", command=dialog.destroy).pack(side=RIGHT)
 
     # ==================== 界面操作 ====================
 
@@ -921,6 +990,7 @@ class DuplicateCleanerGUI:
                 recursive=self.recursive_var.get(),
                 min_size=min_size,
                 file_extensions=self.config.get_filter_extensions(),
+                exclude_dirs=self.config.exclude_dirs,
                 progress_callback=self._on_progress
             )
             self.root.after(0, lambda: self._display_results(result))

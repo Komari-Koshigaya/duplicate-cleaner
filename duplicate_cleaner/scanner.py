@@ -336,6 +336,7 @@ class FileScanner:
         recursive: bool = True,
         min_size: int = 0,
         file_extensions: Optional[List[str]] = None,
+        exclude_dirs: Optional[List[str]] = None,
         progress_callback: Optional[Callable[[str, int, int], None]] = None
     ) -> ScanResult:
         """
@@ -346,6 +347,7 @@ class FileScanner:
             recursive: 是否递归扫描子目录
             min_size: 最小文件大小（字节），忽略小于此大小的文件
             file_extensions: 文件扩展名过滤列表，如 ['.jpg', '.png']，None 表示不过滤
+            exclude_dirs: 排除的目录名列表，如 ['node_modules', '.git']
             progress_callback: 进度回调函数 callback(status, current, total)
 
         Returns:
@@ -376,10 +378,12 @@ class FileScanner:
 
         # === 第一阶段：收集文件并按大小分组 ===
         logger.info(f"开始扫描目录: {directory}")
+        if exclude_dirs:
+            logger.info(f"排除目录: {', '.join(exclude_dirs)}")
         if progress_callback:
             progress_callback("正在扫描文件...", 0, 0)
 
-        size_groups = self._collect_files(directory_path, recursive, min_size, file_extensions)
+        size_groups = self._collect_files(directory_path, recursive, min_size, file_extensions, exclude_dirs)
         result.total_scanned = sum(len(files) for files in size_groups.values())
         logger.info(f"扫描到 {result.total_scanned} 个文件")
 
@@ -456,7 +460,8 @@ class FileScanner:
         base_path: Path,
         recursive: bool,
         min_size: int,
-        file_extensions: Optional[List[str]]
+        file_extensions: Optional[List[str]],
+        exclude_dirs: Optional[List[str]] = None
     ) -> Dict[int, List[str]]:
         """
         收集目录中的文件并按大小分组
@@ -466,33 +471,47 @@ class FileScanner:
             recursive: 是否递归
             min_size: 最小文件大小
             file_extensions: 扩展名过滤
+            exclude_dirs: 排除的目录名列表
 
         Returns:
             {file_size: [file_path, ...]} 字典
         """
         size_groups: Dict[int, List[str]] = defaultdict(list)
-        pattern = '**/*' if recursive else '*'
+        exclude_set = set(exclude_dirs) if exclude_dirs else set()
 
-        for item in base_path.glob(pattern):
+        # 使用 os.walk 比 Path.glob 更快，且支持排除目录
+        for root, dirs, files in os.walk(str(base_path)):
             if self.is_cancelled():
                 break
 
-            if not item.is_file():
+            # 排除目录（原地修改 dirs 列表，os.walk 不会进入这些目录）
+            dirs[:] = [d for d in dirs if d not in exclude_set]
+
+            # 非递归模式只处理顶层
+            if not recursive and root != str(base_path):
                 continue
 
-            # 扩展名过滤
-            if file_extensions and item.suffix.lower() not in file_extensions:
-                continue
+            for filename in files:
+                if self.is_cancelled():
+                    break
 
-            try:
-                # 使用 lstat 避免跟随符号链接
-                stat = item.lstat()
-                # 跳过符号链接和空文件
-                if stat.st_size >= min_size and stat.st_size > 0:
-                    size_groups[stat.st_size].append(str(item))
-            except (PermissionError, OSError) as e:
-                logger.warning(f"无法访问文件: {item} - {e}")
-                continue
+                filepath = os.path.join(root, filename)
+
+                # 扩展名过滤
+                if file_extensions:
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext not in file_extensions:
+                        continue
+
+                try:
+                    # 使用 lstat 避免跟随符号链接
+                    stat = os.lstat(filepath)
+                    # 跳过符号链接和空文件
+                    if stat.st_size >= min_size and stat.st_size > 0:
+                        size_groups[stat.st_size].append(filepath)
+                except (PermissionError, OSError) as e:
+                    logger.warning(f"无法访问文件: {filepath} - {e}")
+                    continue
 
         return size_groups
 
