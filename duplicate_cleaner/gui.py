@@ -697,6 +697,7 @@ class DuplicateCleanerGUI:
             self.root.bell()
 
         self.tree.configure(selectmode="none")
+        self._all_tree_items = []  # 保存所有项目 ID
         for i, (h, files, size) in enumerate(result.duplicates, 1):
             for j, fp in enumerate(files):
                 tag = "original" if j == 0 else "duplicate"
@@ -705,7 +706,8 @@ class DuplicateCleanerGUI:
                     mtime = datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%Y-%m-%d %H:%M")
                 except (OSError, ValueError):
                     mtime = "-"
-                self.tree.insert("", END, values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h), tags=(tag,))
+                item_id = self.tree.insert("", END, values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h), tags=(tag,))
+                self._all_tree_items.append(item_id)
         self.tree.configure(selectmode="extended")
 
         self._select_second()
@@ -723,31 +725,28 @@ class DuplicateCleanerGUI:
     def _do_search(self):
         kw = self.search_var.get().lower().strip()
 
-        # 获取所有项目（包括被隐藏的）
-        # 使用 get_children("") 获取所有子项
-        all_items = list(self.tree.get_children(""))
+        # 使用保存的项目列表
+        if not hasattr(self, '_all_tree_items'):
+            self._all_tree_items = list(self.tree.get_children())
 
         if not kw:
             # 没有搜索关键词，显示所有
-            for item in all_items:
-                if self.tree.parent(item) == "":  # 只处理顶级项
-                    self.tree.reattach(item, "", END)
+            for item in self._all_tree_items:
+                self.tree.reattach(item, "", END)
             return
 
         # 先显示所有
-        for item in all_items:
-            if self.tree.parent(item) == "":
-                self.tree.reattach(item, "", END)
+        for item in self._all_tree_items:
+            self.tree.reattach(item, "", END)
 
         # 然后过滤
-        for item in all_items:
-            if self.tree.parent(item) == "":
-                v = self.tree.item(item, "values")
-                # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
-                if kw in str(v[4]).lower() or kw in str(v[5]).lower():
-                    pass  # 保留
-                else:
-                    self.tree.detach(item)
+        for item in self._all_tree_items:
+            v = self.tree.item(item, "values")
+            # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
+            if kw in str(v[4]).lower() or kw in str(v[5]).lower():
+                pass  # 保留
+            else:
+                self.tree.detach(item)
 
     def _sort_tree(self, col):
         if self.sort_column == col:
