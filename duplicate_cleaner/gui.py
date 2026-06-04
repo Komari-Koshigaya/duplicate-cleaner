@@ -1435,7 +1435,7 @@ class DuplicateCleanerGUI:
                 pass
 
         # 居中显示
-        w, h = 800, 700
+        w, h = 900, 750
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
