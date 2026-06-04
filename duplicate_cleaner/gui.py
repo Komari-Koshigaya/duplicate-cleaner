@@ -993,8 +993,10 @@ class DuplicateCleanerGUI:
 
         self._select_second()
         self.info_var.set(
-            f"📊 扫描 {result.total_scanned} 个文件，发现 {len(result.duplicates)} 组重复 "
-            f"（{result.total_duplicates} 个重复文件），可释放 {format_size(result.total_wasted)}  |  耗时 {scan_time:.1f}秒"
+            f"📊 共 {result.total_scanned} 个文件 | "
+            f"{len(result.duplicates)} 组重复 ({result.total_duplicates} 个文件) | "
+            f"可释放 {format_size(result.total_wasted)} | "
+            f"耗时 {scan_time:.1f}s"
         )
         self.delete_btn.configure(state=NORMAL)
         self.move_btn.configure(state=NORMAL)
