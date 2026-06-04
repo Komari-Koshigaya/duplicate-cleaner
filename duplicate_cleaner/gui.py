@@ -599,15 +599,15 @@ class DuplicateCleanerGUI:
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=hm)
-        hm.add_command(label="📖 使用说明", command=self._show_help, accelerator="F1")
-        hm.add_command(label="⌨️ 快捷键", command=self._show_shortcuts)
+        hm.add_command(label="使用说明        F1", command=self._show_help)
+        hm.add_command(label="快捷键", command=self._show_shortcuts)
         hm.add_separator()
-        hm.add_command(label="🔄 检查更新", command=self._check_update)
+        hm.add_command(label="检查更新", command=self._check_update)
         hm.add_separator()
-        hm.add_command(label="📂 打开日志目录", command=self._open_log_dir)
-        hm.add_command(label="📂 打开配置目录", command=self._open_config_dir)
+        hm.add_command(label="打开日志目录", command=self._open_log_dir)
+        hm.add_command(label="打开配置目录", command=self._open_config_dir)
         hm.add_separator()
-        hm.add_command(label="ℹ️ 关于", command=self._show_about)
+        hm.add_command(label="关于", command=self._show_about)
 
     def _apply_config(self):
         """应用配置"""
@@ -1498,18 +1498,26 @@ class DuplicateCleanerGUI:
         win.transient(self.root)
         win.grab_set()
 
+        # 设置图标
+        icon_path = _get_icon_path()
+        if icon_path:
+            try:
+                win.iconbitmap(str(icon_path))
+            except Exception:
+                pass
+
         # 居中显示
-        w, h = 400, 350
+        w, h = 550, 500
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = tk.Frame(win, padx=20, pady=20)
+        frame = tk.Frame(win, padx=30, pady=25)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="⌨️ 快捷键", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=tk.W, pady=(0, 15))
+        tk.Label(frame, text="⌨️ 快捷键", font=("Microsoft YaHei UI", 16, "bold")).pack(anchor=tk.W, pady=(0, 20))
 
         shortcuts = [
             ("Ctrl+O", "选择目录"),
@@ -1524,9 +1532,9 @@ class DuplicateCleanerGUI:
 
         for key, desc in shortcuts:
             row = tk.Frame(frame)
-            row.pack(fill=tk.X, pady=3)
-            tk.Label(row, text=key, font=("Consolas", 11), width=15, anchor=tk.W).pack(side=tk.LEFT)
-            tk.Label(row, text=desc, font=("Microsoft YaHei UI", 11)).pack(side=tk.LEFT)
+            row.pack(fill=tk.X, pady=4)
+            tk.Label(row, text=key, font=("Consolas", 12), width=18, anchor=tk.W).pack(side=tk.LEFT)
+            tk.Label(row, text=desc, font=("Microsoft YaHei UI", 12)).pack(side=tk.LEFT)
 
     def _show_about(self):
         win = tk.Toplevel(self.root)
