@@ -599,15 +599,15 @@ class DuplicateCleanerGUI:
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=hm)
-        hm.add_command(label="📖 使用说明        F1", command=self._show_help)
-        hm.add_command(label="⌨️ 快捷键", command=self._show_shortcuts)
+        hm.add_command(label="使用说明 (F1)", command=self._show_help)
+        hm.add_command(label="快捷键", command=self._show_shortcuts)
         hm.add_separator()
-        hm.add_command(label="🔄 检查更新", command=self._check_update)
+        hm.add_command(label="检查更新", command=self._check_update)
         hm.add_separator()
-        hm.add_command(label="📂 打开日志目录", command=self._open_log_dir)
-        hm.add_command(label="📂 打开配置目录", command=self._open_config_dir)
+        hm.add_command(label="打开日志目录", command=self._open_log_dir)
+        hm.add_command(label="打开配置目录", command=self._open_config_dir)
         hm.add_separator()
-        hm.add_command(label="ℹ️ 关于", command=self._show_about)
+        hm.add_command(label="关于", command=self._show_about)
 
     def _apply_config(self):
         """应用配置"""
@@ -1507,7 +1507,7 @@ class DuplicateCleanerGUI:
                 pass
 
         # 居中显示
-        w, h = 700, 600
+        w, h = 700, 700
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
