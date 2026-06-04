@@ -599,15 +599,15 @@ class DuplicateCleanerGUI:
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=hm)
-        hm.add_command(label="使用说明        F1", command=self._show_help)
-        hm.add_command(label="快捷键", command=self._show_shortcuts)
+        hm.add_command(label="📖 使用说明        F1", command=self._show_help)
+        hm.add_command(label="⌨️ 快捷键", command=self._show_shortcuts)
         hm.add_separator()
-        hm.add_command(label="检查更新", command=self._check_update)
+        hm.add_command(label="🔄 检查更新", command=self._check_update)
         hm.add_separator()
-        hm.add_command(label="打开日志目录", command=self._open_log_dir)
-        hm.add_command(label="打开配置目录", command=self._open_config_dir)
+        hm.add_command(label="📂 打开日志目录", command=self._open_log_dir)
+        hm.add_command(label="📂 打开配置目录", command=self._open_config_dir)
         hm.add_separator()
-        hm.add_command(label="关于", command=self._show_about)
+        hm.add_command(label="ℹ️ 关于", command=self._show_about)
 
     def _apply_config(self):
         """应用配置"""
@@ -1507,34 +1507,34 @@ class DuplicateCleanerGUI:
                 pass
 
         # 居中显示
-        w, h = 550, 500
+        w, h = 700, 600
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = tk.Frame(win, padx=30, pady=25)
+        frame = tk.Frame(win, padx=40, pady=30)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="⌨️ 快捷键", font=("Microsoft YaHei UI", 16, "bold")).pack(anchor=tk.W, pady=(0, 20))
+        tk.Label(frame, text="⌨️ 快捷键", font=("Microsoft YaHei UI", 18, "bold")).pack(anchor=tk.W, pady=(0, 25))
 
         shortcuts = [
-            ("Ctrl+O", "选择目录"),
-            ("Ctrl+S", "开始扫描"),
-            ("Ctrl+E", "导出为 CSV"),
-            ("Ctrl+Shift+S", "保存扫描结果"),
-            ("Ctrl+Shift+O", "加载扫描结果"),
-            ("Ctrl+Q", "退出"),
-            ("F1", "帮助"),
-            ("F5", "刷新扫描"),
+            ("Ctrl+O", "📂 选择目录"),
+            ("Ctrl+S", "🔍 开始扫描"),
+            ("Ctrl+E", "📊 导出为 CSV"),
+            ("Ctrl+Shift+S", "💾 保存扫描结果"),
+            ("Ctrl+Shift+O", "📂 加载扫描结果"),
+            ("Ctrl+Q", "❌ 退出"),
+            ("F1", "📖 帮助"),
+            ("F5", "🔄 刷新扫描"),
         ]
 
         for key, desc in shortcuts:
             row = tk.Frame(frame)
-            row.pack(fill=tk.X, pady=4)
-            tk.Label(row, text=key, font=("Consolas", 12), width=18, anchor=tk.W).pack(side=tk.LEFT)
-            tk.Label(row, text=desc, font=("Microsoft YaHei UI", 12)).pack(side=tk.LEFT)
+            row.pack(fill=tk.X, pady=5)
+            tk.Label(row, text=key, font=("Consolas", 13), width=18, anchor=tk.W).pack(side=tk.LEFT)
+            tk.Label(row, text=desc, font=("Microsoft YaHei UI", 13)).pack(side=tk.LEFT)
 
     def _show_about(self):
         win = tk.Toplevel(self.root)
