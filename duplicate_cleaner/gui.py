@@ -46,45 +46,59 @@ def _get_file_icon(filepath: str) -> Optional[tk.PhotoImage]:
     try:
         from PIL import Image, ImageDraw
 
-        # 创建简单的文件类型图标
-        size = 16
+        # 创建更大的文件类型图标 (24x24)
+        size = 24
         img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # 根据扩展名选择颜色
+        # 根据扩展名选择颜色和类型标签
         color_map = {
             # 图片
-            '.jpg': '#e91e63', '.jpeg': '#e91e63', '.png': '#e91e63',
-            '.gif': '#e91e63', '.bmp': '#e91e63', '.webp': '#e91e63',
-            '.svg': '#e91e63', '.ico': '#e91e63', '.tiff': '#e91e63',
+            '.jpg': ('#e91e63', 'IMG'), '.jpeg': ('#e91e63', 'IMG'), '.png': ('#e91e63', 'IMG'),
+            '.gif': ('#e91e63', 'IMG'), '.bmp': ('#e91e63', 'IMG'), '.webp': ('#e91e63', 'IMG'),
+            '.svg': ('#e91e63', 'IMG'), '.ico': ('#e91e63', 'IMG'), '.tiff': ('#e91e63', 'IMG'),
             # 视频
-            '.mp4': '#9c27b0', '.avi': '#9c27b0', '.mkv': '#9c27b0',
-            '.mov': '#9c27b0', '.wmv': '#9c27b0', '.flv': '#9c27b0',
+            '.mp4': ('#9c27b0', 'VID'), '.avi': ('#9c27b0', 'VID'), '.mkv': ('#9c27b0', 'VID'),
+            '.mov': ('#9c27b0', 'VID'), '.wmv': ('#9c27b0', 'VID'), '.flv': ('#9c27b0', 'VID'),
             # 音频
-            '.mp3': '#ff9800', '.wav': '#ff9800', '.flac': '#ff9800',
-            '.aac': '#ff9800', '.ogg': '#ff9800', '.wma': '#ff9800',
+            '.mp3': ('#ff9800', 'AUD'), '.wav': ('#ff9800', 'AUD'), '.flac': ('#ff9800', 'AUD'),
+            '.aac': ('#ff9800', 'AUD'), '.ogg': ('#ff9800', 'AUD'), '.wma': ('#ff9800', 'AUD'),
             # 文档
-            '.doc': '#2196f3', '.docx': '#2196f3', '.pdf': '#f44336',
-            '.txt': '#607d8b', '.xls': '#4caf50', '.xlsx': '#4caf50',
-            '.ppt': '#ff5722', '.pptx': '#ff5722', '.csv': '#4caf50',
+            '.doc': ('#2196f3', 'DOC'), '.docx': ('#2196f3', 'DOC'), '.pdf': ('#f44336', 'PDF'),
+            '.txt': ('#607d8b', 'TXT'), '.xls': ('#4caf50', 'XLS'), '.xlsx': ('#4caf50', 'XLS'),
+            '.ppt': ('#ff5722', 'PPT'), '.pptx': ('#ff5722', 'PPT'), '.csv': ('#4caf50', 'CSV'),
             # 压缩包
-            '.zip': '#795548', '.rar': '#795548', '.7z': '#795548',
-            '.tar': '#795548', '.gz': '#795548',
+            '.zip': ('#795548', 'ZIP'), '.rar': ('#795548', 'ZIP'), '.7z': ('#795548', 'ZIP'),
+            '.tar': ('#795548', 'ZIP'), '.gz': ('#795548', 'ZIP'),
             # 代码
-            '.py': '#3f51b5', '.js': '#ffc107', '.html': '#e91e63',
-            '.css': '#2196f3', '.java': '#f44336', '.cpp': '#607d8b',
-            '.c': '#607d8b', '.h': '#607d8b',
+            '.py': ('#3f51b5', 'PY'), '.js': ('#ffc107', 'JS'), '.html': ('#e91e63', 'HTM'),
+            '.css': ('#2196f3', 'CSS'), '.java': ('#f44336', 'JAV'), '.cpp': ('#607d8b', 'C++'),
+            '.c': ('#607d8b', 'C'), '.h': ('#607d8b', 'H'),
         }
 
-        color = color_map.get(ext, '#9e9e9e')  # 默认灰色
+        color, label = color_map.get(ext, ('#9e9e9e', ext[1:4].upper() if ext else '???'))
 
-        # 绘制文件图标
+        # 绘制文件图标（更大的样式）
         # 文件背景
-        draw.rectangle([2, 0, 13, 15], fill='white', outline='#bdbdbd')
-        # 折角
-        draw.polygon([(10, 0), (13, 3), (10, 3)], fill='#bdbdbd')
-        # 文件类型颜色条
-        draw.rectangle([3, 4, 12, 6], fill=color)
+        draw.rectangle([1, 0, 22, 23], fill='white', outline='#90a4ae', width=1)
+        # 折角效果
+        draw.polygon([(17, 0), (22, 5), (17, 5)], fill='#b0bec5')
+        draw.line([(17, 0), (17, 5), (22, 5)], fill='#90a4ae', width=1)
+        # 顶部颜色条（更明显）
+        draw.rectangle([2, 1, 21, 7], fill=color)
+        # 底部类型标签
+        draw.rectangle([2, 8, 21, 22], fill='#f5f5f5', outline='#e0e0e0')
+        # 类型文字（如果PIL支持）
+        try:
+            from PIL import ImageFont
+            font = ImageFont.load_default()
+            # 居中显示标签
+            bbox = draw.textbbox((0, 0), label, font=font)
+            tw = bbox[2] - bbox[0]
+            x = (24 - tw) // 2
+            draw.text((x, 10), label, fill=color, font=font)
+        except Exception:
+            pass
 
         # 转换为 PhotoImage
         from io import BytesIO
@@ -325,7 +339,7 @@ class DuplicateCleanerGUI:
         self.tree.heading("modified", text="修改时间 ↕", anchor=CENTER, command=lambda: self._sort_tree("modified"))
         self.tree.heading("path", text="文件路径 ↕", anchor=W, command=lambda: self._sort_tree("path"))
         self.tree.heading("hash", text="哈希值", anchor=W)
-        self.tree.column("#0", width=30, minwidth=30, stretch=False)  # 图标列
+        self.tree.column("#0", width=50, minwidth=50, stretch=False)  # 图标列（增大）
         self.tree.column("select", width=40, minwidth=40, anchor=CENTER, stretch=False)
         self.tree.column("group", width=60, minwidth=50, anchor=CENTER, stretch=False)
         self.tree.column("size", width=90, minwidth=70, anchor=E, stretch=False)
