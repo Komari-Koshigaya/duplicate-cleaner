@@ -722,15 +722,26 @@ class DuplicateCleanerGUI:
 
     def _do_search(self):
         kw = self.search_var.get().lower().strip()
+
+        # 获取所有项目（包括被隐藏的）
+        all_items = self.tree.get_children("")
+
         if not kw:
-            for item in self.tree.get_children():
+            # 没有搜索关键词，显示所有
+            for item in all_items:
                 self.tree.reattach(item, "", END)
             return
-        for item in self.tree.get_children():
+
+        # 先显示所有，再过滤
+        for item in all_items:
+            self.tree.reattach(item, "", END)
+
+        # 然后过滤
+        for item in all_items:
             v = self.tree.item(item, "values")
             # path 在第 4 列（索引 4），hash 在第 5 列（索引 5）
             if kw in str(v[4]).lower() or kw in str(v[5]).lower():
-                self.tree.reattach(item, "", END)
+                pass  # 保留
             else:
                 self.tree.detach(item)
 
