@@ -1570,13 +1570,11 @@ def main():
     # 设置系统托盘
     app._setup_system_tray()
 
-    # 延迟显示窗口（等界面构建完成）
-    def _show_window():
-        root.deiconify()
-        root.lift()
-        root.focus_force()
+    # 立即显示窗口（界面已构建完成）
+    root.deiconify()
+    root.lift()
+    root.focus_force()
 
-    root.after(150, _show_window)
     root.mainloop()
 
 
