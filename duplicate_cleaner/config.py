@@ -68,6 +68,7 @@ class AppConfig:
         file_filter: 文件类型过滤名称
         single_instance: 是否单实例模式
         dark_mode: 是否深色模式
+        close_to_tray: 关闭时是否最小化到托盘
     """
     font_size: str = DEFAULT_FONT_SIZE
     window_size: str = DEFAULT_WINDOW_SIZE
@@ -79,6 +80,7 @@ class AppConfig:
     file_filter: str = DEFAULT_FILE_FILTER
     single_instance: bool = DEFAULT_SINGLE_INSTANCE
     dark_mode: bool = False
+    close_to_tray: bool = True
 
     def save(self) -> bool:
         """
@@ -102,6 +104,7 @@ class AppConfig:
                 "file_filter": self.file_filter,
                 "single_instance": self.single_instance,
                 "dark_mode": self.dark_mode,
+                "close_to_tray": self.close_to_tray,
             }
 
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -145,6 +148,7 @@ class AppConfig:
                 file_filter=data.get("file_filter", DEFAULT_FILE_FILTER),
                 single_instance=data.get("single_instance", DEFAULT_SINGLE_INSTANCE),
                 dark_mode=data.get("dark_mode", False),
+                close_to_tray=data.get("close_to_tray", True),
             )
 
             logger.debug(f"配置已加载: {config_file}")

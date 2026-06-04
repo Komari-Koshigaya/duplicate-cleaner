@@ -507,6 +507,14 @@ class DuplicateCleanerGUI:
         sm.add_separator()
         self.sound_var = tk.BooleanVar(value=self.config.sound_enabled)
         sm.add_checkbutton(label="🔊 扫描完成提示音", variable=self.sound_var)
+        sm.add_separator()
+        # 关闭行为设置
+        self.close_to_tray_var = tk.BooleanVar(value=self.config.close_to_tray)
+        sm.add_checkbutton(
+            label="📌 关闭时最小化到托盘",
+            variable=self.close_to_tray_var,
+            command=self._on_close_to_tray_change
+        )
 
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
@@ -545,6 +553,7 @@ class DuplicateCleanerGUI:
         self.config.sound_enabled = self.sound_var.get()
         self.config.single_instance = self.single_instance_var.get()
         self.config.dark_mode = self.dark_mode_var.get()
+        self.config.close_to_tray = self.close_to_tray_var.get()
         self.config.add_recent_dir(self.dir_var.get())
         self.config.save()
 
@@ -578,6 +587,13 @@ class DuplicateCleanerGUI:
             except OSError:
                 pass
             messagebox.showinfo("设置", "单实例模式已关闭")
+
+    def _on_close_to_tray_change(self):
+        """切换关闭时最小化到托盘"""
+        self.config.close_to_tray = self.close_to_tray_var.get()
+        self._save_config()
+        status = "开启" if self.close_to_tray_var.get() else "关闭"
+        messagebox.showinfo("设置", f"关闭时最小化到托盘已{status}")
 
     # ==================== 界面操作 ====================
 
@@ -1387,16 +1403,23 @@ class DuplicateCleanerGUI:
         """设置系统托盘"""
         try:
             import pystray
-            from PIL import Image, ImageDraw
+            from PIL import Image, ImageDraw, ImageFont
 
-            # 创建托盘图标
+            # 创建托盘图标（与界面图标风格一致）
             icon_size = 64
             img = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
-            # 绘制一个简单的图标
-            draw.rectangle([8, 8, 56, 56], fill='#2196f3', outline='#1976d2')
-            draw.text((16, 16), "DC", fill='white')
+            # 绘制文件图标样式
+            # 文件背景（白色圆角矩形）
+            draw.rounded_rectangle([8, 4, 56, 60], radius=6, fill='white', outline='#90a4ae', width=2)
+            # 顶部颜色条（蓝色，与主题色一致）
+            draw.rectangle([10, 6, 54, 20], fill='#2196f3')
+            # 折角效果
+            draw.polygon([(46, 4), (56, 14), (46, 14)], fill='#90a4ae')
+            # 放大镜图标（表示搜索/清理）
+            draw.ellipse([20, 28, 44, 52], outline='#2196f3', width=3)
+            draw.line([38, 46, 50, 58], fill='#2196f3', width=3)
 
             # 创建托盘菜单
             menu = pystray.Menu(
@@ -1409,7 +1432,7 @@ class DuplicateCleanerGUI:
             self._tray_icon = pystray.Icon(
                 "duplicate_cleaner",
                 img,
-                "Duplicate Cleaner",
+                "Duplicate Cleaner - 重复文件清理工具",
                 menu
             )
 
@@ -1440,7 +1463,8 @@ class DuplicateCleanerGUI:
 
     def _on_window_close(self):
         """窗口关闭事件"""
-        if hasattr(self, '_tray_icon') and self._tray_icon:
+        # 检查配置：是否最小化到托盘
+        if self.close_to_tray_var.get() and hasattr(self, '_tray_icon') and self._tray_icon:
             # 最小化到托盘
             self._minimize_to_tray()
         else:
