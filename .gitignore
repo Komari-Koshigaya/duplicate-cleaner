@@ -40,6 +40,9 @@ Thumbs.db
 .coverage
 htmlcov/
 
+# PyInstaller
+*.spec
+
 # App config (user-specific)
 .duplicate_cleaner_config.json
 .duplicate_cleaner.lock

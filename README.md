@@ -45,11 +45,14 @@ duplicate-cleaner/
 │   └── test_utils.py
 ├── icon.ico                    # 窗口图标
 ├── icon.png                    # 托盘图标
+├── entry.py                    # 打包入口
+├── build.py                    # 打包脚本
 ├── CLAUDE.md                   # 项目说明
 ├── README.md                   # 用户文档
 ├── requirements.txt            # 依赖声明
 ├── pytest.ini                  # 测试配置
-└── 启动.bat                    # Windows 启动脚本
+├── 启动.bat                    # Windows 启动脚本
+└── 打包.bat                    # Windows 打包脚本
 ```
 
 ## 安装
@@ -118,6 +121,16 @@ python -m pytest tests/test_scanner.py
 # 显示覆盖率
 python -m pytest --cov=duplicate_cleaner
 ```
+
+## 打包为 exe
+
+```bash
+# 方式一：双击打包.bat
+# 方式二：命令行
+python build.py
+```
+
+打包完成后，`dist/DuplicateCleaner.exe` 可以直接在任何 Windows 电脑上运行，无需安装 Python 或任何依赖。
 
 ## 技术栈
 
