@@ -1412,18 +1412,18 @@ class DuplicateCleanerGUI:
         win.transient(self.root)
         win.grab_set()
 
-        # 居中显示（增大窗口）
-        w, h = 550, 500
+        # 居中显示
+        w, h = 650, 550
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = tk.Frame(win, padx=30, pady=30)
+        frame = tk.Frame(win, padx=40, pady=30)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 22, "bold")).pack(pady=(0, 15))
+        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 24, "bold")).pack(pady=(0, 15))
         tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 14)).pack()
         tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别\n支持图形界面和命令行两种模式", font=("Microsoft YaHei UI", 12)).pack(pady=(10, 0))
         tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(20, 0))
