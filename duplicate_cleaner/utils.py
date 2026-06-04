@@ -45,8 +45,14 @@ def get_lock_file() -> Path:
 
 
 def get_log_file() -> Path:
-    """获取日志文件路径"""
-    log_dir = get_app_data_dir() / "logs"
+    """获取日志文件路径（放在运行目录下）"""
+    if getattr(sys, 'frozen', False):
+        # 打包后的 exe，放在 exe 所在目录
+        base_dir = Path(sys.executable).parent
+    else:
+        # 开发环境，放在项目根目录
+        base_dir = Path(__file__).parent.parent
+    log_dir = base_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir / f"duplicate_cleaner_{datetime.now().strftime('%Y%m%d')}.log"
 
