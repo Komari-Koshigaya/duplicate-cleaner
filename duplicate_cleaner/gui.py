@@ -591,11 +591,21 @@ class DuplicateCleanerGUI:
             command=self._on_close_to_tray_change
         )
 
+        # 设置 - 配置备份和恢复
+        sm.add_separator()
+        sm.add_command(label="💾 备份配置", command=self._backup_config)
+        sm.add_command(label="📂 恢复配置", command=self._restore_config)
+
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=hm)
         hm.add_command(label="📖 使用说明", command=self._show_help, accelerator="F1")
         hm.add_command(label="⌨️ 快捷键", command=self._show_shortcuts)
+        hm.add_separator()
+        hm.add_command(label="🔄 检查更新", command=self._check_update)
+        hm.add_separator()
+        hm.add_command(label="📂 打开日志目录", command=self._open_log_dir)
+        hm.add_command(label="📂 打开配置目录", command=self._open_config_dir)
         hm.add_separator()
         hm.add_command(label="ℹ️ 关于", command=self._show_about)
 
@@ -627,6 +637,62 @@ class DuplicateCleanerGUI:
                 self._save_config()
             except Exception as e:
                 logger.error(f"切换主题失败: {e}")
+
+    def _backup_config(self):
+        """备份配置"""
+        from .utils import backup_config
+        result = backup_config()
+        if result:
+            messagebox.showinfo("备份成功", f"配置已备份到:\n{result}")
+        else:
+            messagebox.showwarning("备份失败", "无法备份配置文件")
+
+    def _restore_config(self):
+        """恢复配置"""
+        from .utils import list_backups, restore_config
+        backups = list_backups()
+        if not backups:
+            messagebox.showinfo("提示", "没有找到备份文件")
+            return
+
+        # 选择备份文件
+        from tkinter import filedialog
+        backup_file = filedialog.askopenfilename(
+            title="选择备份文件",
+            initialdir=str(backups[0].parent),
+            filetypes=[("JSON", "*.json")]
+        )
+        if not backup_file:
+            return
+
+        if messagebox.askyesno("确认恢复", "恢复配置将覆盖当前配置，确定吗？"):
+            if restore_config(Path(backup_file)):
+                messagebox.showinfo("成功", "配置已恢复，请重启程序生效")
+            else:
+                messagebox.showerror("失败", "恢复配置失败")
+
+    def _check_update(self):
+        """检查更新"""
+        from .gui import _check_for_updates
+        new_version, url = _check_for_updates()
+        if new_version:
+            if messagebox.askyesno("发现新版本", f"发现新版本 v{new_version}（当前 v{__version__}）\n\n是否前往下载？"):
+                import webbrowser
+                webbrowser.open(url)
+        else:
+            messagebox.showinfo("检查更新", f"当前已是最新版本 v{__version__}")
+
+    def _open_log_dir(self):
+        """打开日志目录"""
+        from .utils import get_log_file
+        log_dir = get_log_file().parent
+        self._open_folder_path(str(log_dir))
+
+    def _open_config_dir(self):
+        """打开配置目录"""
+        from .utils import get_config_file
+        config_dir = get_config_file().parent
+        self._open_folder_path(str(config_dir))
 
     # ==================== 配置 ====================
 
