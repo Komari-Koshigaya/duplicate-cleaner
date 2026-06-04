@@ -957,14 +957,14 @@ class DuplicateCleanerGUI:
         scan_time = time.time() - self._scan_start_time if hasattr(self, '_scan_start_time') else 0
 
         if not result.duplicates:
-            self.info_var.set(f"✨ 未发现重复文件 (耗时 {scan_time:.1f}秒)")
-            self._update_status("✅ 扫描完成，未发现重复文件")
+            self.info_var.set(f"✨ 未发现重复文件")
+            self._update_status(f"✅ 扫描完成，未发现重复文件  |  耗时 {scan_time:.1f}s")
             self.progress_var.set(100)
             if self.sound_var.get():
                 self.root.bell()
             return
 
-        self._update_status(f"✅ 扫描完成: {len(result.duplicates)} 组重复")
+        self._update_status(f"✅ 扫描完成: {len(result.duplicates)} 组重复  |  耗时 {scan_time:.1f}s")
         self.progress_var.set(100)
         if self.sound_var.get():
             self.root.bell()
@@ -995,8 +995,7 @@ class DuplicateCleanerGUI:
         self.info_var.set(
             f"📊 共 {result.total_scanned} 个文件 | "
             f"{len(result.duplicates)} 组重复 ({result.total_duplicates} 个文件) | "
-            f"可释放 {format_size(result.total_wasted)} | "
-            f"耗时 {scan_time:.1f}s"
+            f"可释放 {format_size(result.total_wasted)}"
         )
         self.delete_btn.configure(state=NORMAL)
         self.move_btn.configure(state=NORMAL)
