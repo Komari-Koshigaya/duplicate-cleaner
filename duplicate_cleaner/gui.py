@@ -27,6 +27,30 @@ logger = logging.getLogger("duplicate_cleaner")
 _icon_cache: Dict[str, tk.PhotoImage] = {}
 
 
+def _get_icon_path() -> Optional[Path]:
+    """获取图标文件路径"""
+    # 在包目录下查找 icon.ico
+    icon_path = Path(__file__).parent / "icon.ico"
+    if icon_path.exists():
+        return icon_path
+    # 在项目根目录查找
+    icon_path = Path(__file__).parent.parent / "icon.ico"
+    if icon_path.exists():
+        return icon_path
+    return None
+
+
+def _get_icon_png_path() -> Optional[Path]:
+    """获取 PNG 图标文件路径"""
+    icon_path = Path(__file__).parent / "icon.png"
+    if icon_path.exists():
+        return icon_path
+    icon_path = Path(__file__).parent.parent / "icon.png"
+    if icon_path.exists():
+        return icon_path
+    return None
+
+
 def _get_file_icon(filepath: str) -> Optional[tk.PhotoImage]:
     """
     获取文件类型图标
@@ -173,6 +197,14 @@ class DuplicateCleanerGUI:
         self.root = root
         self.root.title(f"Duplicate Cleaner v{__version__}")
         self.root.minsize(1000, 600)
+
+        # 设置窗口图标
+        icon_path = _get_icon_path()
+        if icon_path:
+            try:
+                self.root.iconbitmap(str(icon_path))
+            except Exception as e:
+                logger.debug(f"设置窗口图标失败: {e}")
 
         # 窗口居中显示
         w, h = 1400, 900
@@ -1380,8 +1412,8 @@ class DuplicateCleanerGUI:
         win.transient(self.root)
         win.grab_set()
 
-        # 居中显示
-        w, h = 500, 400
+        # 居中显示（增大窗口）
+        w, h = 550, 500
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
@@ -1391,11 +1423,12 @@ class DuplicateCleanerGUI:
         frame = tk.Frame(win, padx=30, pady=30)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 20, "bold")).pack(pady=(0, 15))
+        tk.Label(frame, text="🔍 Duplicate Cleaner", font=("Microsoft YaHei UI", 22, "bold")).pack(pady=(0, 15))
         tk.Label(frame, text=f"v{__version__}", font=("Microsoft YaHei UI", 14)).pack()
         tk.Label(frame, text="\n重复文件清理工具\n基于文件内容哈希精准识别\n支持图形界面和命令行两种模式", font=("Microsoft YaHei UI", 12)).pack(pady=(10, 0))
         tk.Label(frame, text="Python + tkinter + ttkbootstrap", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(20, 0))
         tk.Label(frame, text="作者: Kanji", font=("Microsoft YaHei UI", 11), fg="gray").pack(pady=(5, 0))
+        tk.Label(frame, text="GitHub: Komari-Koshigaya/duplicate-cleaner", font=("Microsoft YaHei UI", 10), fg="gray").pack(pady=(5, 0))
 
     # ==================== 系统托盘 ====================
 
@@ -1405,21 +1438,20 @@ class DuplicateCleanerGUI:
             import pystray
             from PIL import Image, ImageDraw, ImageFont
 
-            # 创建托盘图标（与界面图标风格一致）
-            icon_size = 64
-            img = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(img)
-
-            # 绘制文件图标样式
-            # 文件背景（白色圆角矩形）
-            draw.rounded_rectangle([8, 4, 56, 60], radius=6, fill='white', outline='#90a4ae', width=2)
-            # 顶部颜色条（蓝色，与主题色一致）
-            draw.rectangle([10, 6, 54, 20], fill='#2196f3')
-            # 折角效果
-            draw.polygon([(46, 4), (56, 14), (46, 14)], fill='#90a4ae')
-            # 放大镜图标（表示搜索/清理）
-            draw.ellipse([20, 28, 44, 52], outline='#2196f3', width=3)
-            draw.line([38, 46, 50, 58], fill='#2196f3', width=3)
+            # 加载图标文件（与界面图标一致）
+            png_path = _get_icon_png_path()
+            if png_path and png_path.exists():
+                img = Image.open(str(png_path))
+            else:
+                # 备用：绘制图标
+                icon_size = 64
+                img = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(img)
+                draw.rounded_rectangle([8, 4, 56, 60], radius=6, fill='white', outline='#90a4ae', width=2)
+                draw.rectangle([10, 6, 54, 20], fill='#2196f3')
+                draw.polygon([(46, 4), (56, 14), (46, 14)], fill='#90a4ae')
+                draw.ellipse([20, 28, 44, 52], outline='#2196f3', width=3)
+                draw.line([38, 46, 50, 58], fill='#2196f3', width=3)
 
             # 创建托盘菜单
             menu = pystray.Menu(
