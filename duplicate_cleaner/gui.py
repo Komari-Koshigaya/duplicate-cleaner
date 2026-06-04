@@ -1416,9 +1416,16 @@ class DuplicateCleanerGUI:
             # 绑定最小化事件
             self.root.protocol('WM_DELETE_WINDOW', self._on_window_close)
 
-            # 在后台线程运行托盘
+            # 在后台线程运行托盘（非阻塞）
             import threading
-            tray_thread = threading.Thread(target=self._tray_icon.run, daemon=True)
+
+            def run_tray():
+                try:
+                    self._tray_icon.run()
+                except Exception as e:
+                    logger.error(f"托盘运行失败: {e}")
+
+            tray_thread = threading.Thread(target=run_tray, daemon=True)
             tray_thread.start()
 
             logger.info("系统托盘已启用")
