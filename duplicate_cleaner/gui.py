@@ -515,7 +515,7 @@ class DuplicateCleanerGUI:
         self.window_size_var = tk.StringVar(value=self.config.window_size)
         wm = tk.Menu(vm, tearoff=0)
         vm.add_cascade(label="窗口大小", menu=wm)
-        for s in ["小", "中", "大"]:
+        for s in ["小", "中", "大", "特大"]:
             w, h = WINDOW_SIZES[s]
             wm.add_radiobutton(
                 label=f"{s} ({w}×{h})",
@@ -528,7 +528,7 @@ class DuplicateCleanerGUI:
         self.font_size_var = tk.StringVar(value=self.config.font_size)
         fm2 = tk.Menu(vm, tearoff=0)
         vm.add_cascade(label="字体大小", menu=fm2)
-        for s in ["小", "中", "大"]:
+        for s in ["小", "中", "大", "特大"]:
             fm2.add_radiobutton(
                 label=s,
                 variable=self.font_size_var,
