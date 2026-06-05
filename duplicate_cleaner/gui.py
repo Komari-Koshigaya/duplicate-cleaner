@@ -787,26 +787,16 @@ class DuplicateCleanerGUI:
         scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        # 根据深色模式设置文本框颜色
-        if self.dark_mode_var.get():
-            bg_color = "#2b2b2b"
-            fg_color = "#ffffff"
-            insert_color = "#ffffff"
-        else:
-            bg_color = "#ffffff"
-            fg_color = "#000000"
-            insert_color = "#000000"
-
         text_widget = tk.Text(
             text_frame,
             wrap=tk.WORD,
             font=("Consolas", 11),
             yscrollcommand=scrollbar.set,
-            bg=bg_color,
-            fg=fg_color,
-            insertbackground=insert_color,
+            bg="white",
+            fg="black",
+            insertbackground="black",
             selectbackground="#264f78",
-            selectforeground="#ffffff"
+            selectforeground="white"
         )
         text_widget.pack(fill=BOTH, expand=True)
         scrollbar.config(command=text_widget.yview)
