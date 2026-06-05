@@ -774,17 +774,18 @@ class DuplicateCleanerGUI:
         y = (sh - h) // 2
         dialog.geometry(f"{w}x{h}+{x}+{y}")
 
-        frame = ttk.Frame(dialog, padding=15)
+        # 使用 tk.Frame 而不是 ttk.Frame，避免主题影响
+        frame = tk.Frame(dialog, padx=15, pady=15)
         frame.pack(fill=BOTH, expand=True)
 
-        ttk.Label(frame, text="📁 排除目录设置", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=W, pady=(0, 10))
-        ttk.Label(frame, text="以下目录名在扫描时会被跳过（每行一个）：", foreground="gray").pack(anchor=W, pady=(0, 10))
+        tk.Label(frame, text="📁 排除目录设置", font=("Microsoft YaHei UI", 14, "bold")).pack(anchor=W, pady=(0, 10))
+        tk.Label(frame, text="以下目录名在扫描时会被跳过（每行一个）：", fg="gray").pack(anchor=W, pady=(0, 10))
 
         # 文本框
-        text_frame = ttk.Frame(frame)
+        text_frame = tk.Frame(frame)
         text_frame.pack(fill=BOTH, expand=True)
 
-        scrollbar = ttk.Scrollbar(text_frame)
+        scrollbar = tk.Scrollbar(text_frame)
         scrollbar.pack(side=RIGHT, fill=Y)
 
         text_widget = tk.Text(
@@ -796,7 +797,9 @@ class DuplicateCleanerGUI:
             fg="black",
             insertbackground="black",
             selectbackground="#264f78",
-            selectforeground="white"
+            selectforeground="white",
+            relief=tk.SOLID,
+            borderwidth=1
         )
         text_widget.pack(fill=BOTH, expand=True)
         scrollbar.config(command=text_widget.yview)
