@@ -6,25 +6,32 @@
 
 - ✅ 基于 MD5 哈希准确判断文件内容重复
 - ✅ 多线程并行扫描，高性能（自动检测 SSD/HDD 调整线程数）
+- ✅ xxhash 哈希算法（比 MD5 快数倍）
 - ✅ 图形界面（tkinter + ttkbootstrap）
 - ✅ 命令行模式
 - ✅ 双击/右键打开文件预览
 - ✅ 列头排序、搜索过滤
 - ✅ 文件类型过滤（图片/视频/音频/文档/压缩包）
 - ✅ 文件类型图标（按颜色区分类型）
+- ✅ 排除目录（默认排除 node_modules、.git 等，可自定义）
 - ✅ 安全删除（回收站/永久删除）
 - ✅ 移动到文件夹（将重复文件移动到指定目录）
 - ✅ 导出扫描结果为 CSV
 - ✅ 保存/加载扫描结果（JSON 格式）
+- ✅ 配置备份和恢复
 - ✅ 单实例模式、配置自动保存
 - ✅ 窗口大小/字体大小可调（小/中/大/特大）
+- ✅ 13 种主题可选
 - ✅ 深色模式（ttkbootstrap darkly 主题）
 - ✅ 系统托盘（最小化到托盘）
 - ✅ 关闭行为可配置（退出/最小化到托盘）
 - ✅ 修改时间显示
+- ✅ 扫描耗时和总文件数统计
 - ✅ 拖放目录到窗口
 - ✅ 文件属性查看
 - ✅ 快捷键支持
+- ✅ 自动更新检查
+- ✅ 日志文件记录
 
 ## 项目结构
 
@@ -67,6 +74,7 @@ pip install -r requirements.txt
 # pystray - 系统托盘
 # Pillow - 图标生成
 # tkinterdnd2 - 拖放支持
+# xxhash - 高性能哈希算法
 ```
 
 ## 使用方法
@@ -138,6 +146,7 @@ python build.py
 - tkinter + ttkbootstrap（GUI）
 - xxhash / hashlib（哈希算法，xxhash 比 MD5 快数倍）
 - threading / concurrent.futures（多线程）
+- os.walk（文件遍历，支持排除目录）
 - send2trash（安全删除）
 - pystray（系统托盘）
 - Pillow（图标生成）
