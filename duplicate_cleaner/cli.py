@@ -30,7 +30,10 @@ def display_duplicates(result: ScanResult) -> None:
         return
 
     print("\n" + "=" * 60)
-    print("📋 发现以下重复文件:")
+    if result.compare_dir:
+        print("📋 发现以下跨目录重复文件:")
+    else:
+        print("📋 发现以下重复文件:")
     print("=" * 60)
 
     for i, (file_hash, files, size) in enumerate(result.duplicates, 1):
@@ -183,6 +186,7 @@ def main():
   %(prog)s --auto /path/to/directory       # 自动模式
   %(prog)s --trash /path/to/directory      # 移到回收站
   %(prog)s --min-size 1024 /path/to/dir    # 只检查大于1KB的文件
+  %(prog)s --compare /backup /original     # 对比两个目录的重复文件
         """
     )
 
@@ -195,6 +199,7 @@ def main():
     parser.add_argument("--auto", action="store_true", help="自动模式，保留每组第一个")
     parser.add_argument("--trash", action="store_true", help="移到回收站而非永久删除")
     parser.add_argument("--list-only", action="store_true", help="仅列出重复文件")
+    parser.add_argument("--compare", metavar="DIR", help="对比模式：指定第二个目录，只查找跨目录的重复文件")
     parser.add_argument("-v", "--verbose", action="store_true", help="详细输出")
 
     args = parser.parse_args()
@@ -214,8 +219,24 @@ def main():
         print("   运行: pip install send2trash")
         sys.exit(1)
 
+    # 验证对比目录
+    if args.compare:
+        if not os.path.isdir(args.compare):
+            print(f"❌ 错误: 对比目录不存在: {args.compare}")
+            sys.exit(1)
+        abs_a = os.path.abspath(args.directory)
+        abs_b = os.path.abspath(args.compare)
+        if abs_a == abs_b:
+            print("❌ 错误: 对比模式下两个目录不能相同")
+            sys.exit(1)
+        if abs_a.startswith(abs_b + os.sep) or abs_b.startswith(abs_a + os.sep):
+            print("❌ 错误: 对比模式下两个目录不能有包含关系")
+            sys.exit(1)
+
     # 扫描
     print(f"\n🔍 扫描目录: {args.directory}")
+    if args.compare:
+        print(f"📂 对比目录: {args.compare}")
     recursive = not args.no_recursive
 
     scanner = FileScanner()
@@ -226,6 +247,7 @@ def main():
 
     result = scanner.scan(
         directory=args.directory,
+        compare_dir=args.compare,
         recursive=recursive,
         min_size=args.min_size,
         progress_callback=progress

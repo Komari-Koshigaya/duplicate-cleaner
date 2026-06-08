@@ -91,6 +91,7 @@ class AppConfig:
         window_size: 窗口大小（小/中/大）
         sound_enabled: 扫描完成是否播放提示音
         last_dir: 上次扫描的目录
+        last_dir_b: 对比模式上次使用的第二目录
         recent_dirs: 最近扫描的目录列表（最多 10 个）
         recursive: 是否递归扫描子目录
         min_size: 最小文件大小（字节字符串）
@@ -105,6 +106,7 @@ class AppConfig:
     window_size: str = DEFAULT_WINDOW_SIZE
     sound_enabled: bool = DEFAULT_SOUND_ENABLED
     last_dir: str = ""
+    last_dir_b: str = ""
     recent_dirs: List[str] = field(default_factory=list)
     recursive: bool = DEFAULT_RECURSIVE
     min_size: str = DEFAULT_MIN_SIZE
@@ -131,6 +133,7 @@ class AppConfig:
                 "window_size": self.window_size,
                 "sound_enabled": self.sound_enabled,
                 "last_dir": self.last_dir,
+                "last_dir_b": self.last_dir_b,
                 "recent_dirs": self.recent_dirs[:10],  # 只保留最近 10 个
                 "recursive": self.recursive,
                 "min_size": self.min_size,
@@ -177,6 +180,7 @@ class AppConfig:
                 window_size=data.get("window_size", DEFAULT_WINDOW_SIZE),
                 sound_enabled=data.get("sound_enabled", DEFAULT_SOUND_ENABLED),
                 last_dir=data.get("last_dir", ""),
+                last_dir_b=data.get("last_dir_b", ""),
                 recent_dirs=data.get("recent_dirs", [])[:10],
                 recursive=data.get("recursive", DEFAULT_RECURSIVE),
                 min_size=data.get("min_size", DEFAULT_MIN_SIZE),

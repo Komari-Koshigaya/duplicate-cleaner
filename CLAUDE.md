@@ -50,8 +50,9 @@ duplicate-cleaner/
 │   ├── config.py               # 配置管理 (AppConfig)
 │   ├── gui.py                  # 图形界面 (DuplicateCleanerGUI)
 │   ├── scanner.py              # 扫描引擎 (FileScanner)
+│   ├── shell_integration.py    # Windows 右键菜单集成
 │   └── utils.py                # 公共工具函数
-├── tests/                      # 单元测试 (61 个测试)
+├── tests/                      # 单元测试 (82 个测试)
 │   ├── test_cli.py
 │   ├── test_config.py
 │   ├── test_scanner.py
@@ -77,6 +78,7 @@ duplicate-cleaner/
 - xxhash 优先，MD5 兜底
 - 多线程并行，线程数自适应硬盘类型（SSD/HDD）
 - 支持排除目录
+- 支持文件夹对比模式（`compare_dir` 参数）
 - 线程安全：使用 `threading.Lock` 保护共享状态
 
 ### config.py - 配置管理
@@ -96,6 +98,12 @@ duplicate-cleaner/
 ### cli.py - 命令行界面
 - 复用 scanner 和 utils
 - 支持 --dry-run、--auto、--trash 等参数
+- 支持 --compare 参数进行文件夹对比
+
+### shell_integration.py - Windows 右键菜单集成
+- 通过注册表为资源管理器添加右键菜单项
+- 支持扫描和对比两种操作
+- 设置菜单中可启用/禁用
 
 ## 已完成功能
 
@@ -130,7 +138,9 @@ duplicate-cleaner/
 - [x] 日志文件记录
 - [x] 打包为 exe：支持打包为单个可执行文件
 - [x] 窗口居中显示
-- [x] 单元测试：61 个测试覆盖核心功能
+- [x] 单元测试：82 个测试覆盖核心功能
+- [x] 文件夹对比模式：选择两个目录，只查找跨目录的重复文件
+- [x] 右键菜单集成：Windows 资源管理器右键直接扫描/对比（设置中可移除）
 
 ## 待办事项
 
@@ -138,4 +148,3 @@ duplicate-cleaner/
 - [ ] 相似图片检测（感知哈希）
 - [ ] 符号链接替代（节省空间）
 - [ ] 扫描报告导出（HTML）
-- [ ] 右键菜单集成（Windows）

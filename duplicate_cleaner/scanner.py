@@ -273,12 +273,14 @@ class ScanResult:
         total_duplicates: 重复文件总数
         total_wasted: 浪费的磁盘空间（字节）
         cancelled: 是否被用户取消
+        compare_dir: 对比模式下的第二目录路径（None 表示单目录模式）
     """
     duplicates: List[Tuple[str, List[str], int]] = field(default_factory=list)
     total_scanned: int = 0
     total_duplicates: int = 0
     total_wasted: int = 0
     cancelled: bool = False
+    compare_dir: Optional[str] = None
 
 
 class FileScanner:
@@ -333,6 +335,7 @@ class FileScanner:
     def scan(
         self,
         directory: str,
+        compare_dir: Optional[str] = None,
         recursive: bool = True,
         min_size: int = 0,
         file_extensions: Optional[List[str]] = None,
@@ -344,6 +347,7 @@ class FileScanner:
 
         Args:
             directory: 要扫描的目录路径
+            compare_dir: 对比模式的第二目录路径，None 表示单目录模式
             recursive: 是否递归扫描子目录
             min_size: 最小文件大小（字节），忽略小于此大小的文件
             file_extensions: 文件扩展名过滤列表，如 ['.jpg', '.png']，None 表示不过滤
@@ -359,12 +363,28 @@ class FileScanner:
         """
         self.reset_cancel()
         result = ScanResult()
+        result.compare_dir = compare_dir
 
         directory_path = Path(directory)
         if not directory_path.exists():
             raise FileNotFoundError(f"目录不存在: {directory}")
         if not directory_path.is_dir():
             raise FileNotFoundError(f"不是有效目录: {directory}")
+
+        # 对比模式：验证第二目录
+        compare_path = None
+        if compare_dir:
+            compare_path = Path(compare_dir)
+            if not compare_path.exists():
+                raise FileNotFoundError(f"对比目录不存在: {compare_dir}")
+            if not compare_path.is_dir():
+                raise FileNotFoundError(f"不是有效目录: {compare_dir}")
+            abs_a = os.path.abspath(directory)
+            abs_b = os.path.abspath(compare_dir)
+            if abs_a == abs_b:
+                raise ValueError("对比模式下两个目录不能相同")
+            if abs_a.startswith(abs_b + os.sep) or abs_b.startswith(abs_a + os.sep):
+                raise ValueError("对比模式下两个目录不能有包含关系")
 
         # 检测硬盘类型并获取最优线程数
         if self._max_workers is None:
@@ -378,12 +398,19 @@ class FileScanner:
 
         # === 第一阶段：收集文件并按大小分组 ===
         logger.info(f"开始扫描目录: {directory}")
+        if compare_dir:
+            logger.info(f"对比目录: {compare_dir}")
         if exclude_dirs:
             logger.info(f"排除目录: {', '.join(exclude_dirs)}")
         if progress_callback:
             progress_callback("正在扫描文件...", 0, 0)
 
+        # 收集文件（对比模式收集两个目录）
         size_groups = self._collect_files(directory_path, recursive, min_size, file_extensions, exclude_dirs)
+        if compare_path:
+            compare_groups = self._collect_files(compare_path, recursive, min_size, file_extensions, exclude_dirs)
+            for size, files in compare_groups.items():
+                size_groups[size].extend(files)
         result.total_scanned = sum(len(files) for files in size_groups.values())
         logger.info(f"扫描到 {result.total_scanned} 个文件")
 
@@ -441,6 +468,16 @@ class FileScanner:
                 files = [f[0] for f in files_info]
                 size = files_info[0][1]
                 result.duplicates.append((hash_val, files, size))
+
+        # 对比模式：只保留跨目录的重复组
+        if compare_dir:
+            dir_a = os.path.abspath(directory) + os.sep
+            dir_b = os.path.abspath(compare_dir) + os.sep
+            result.duplicates = [
+                (h, files, s) for h, files, s in result.duplicates
+                if any(f.startswith(dir_a) for f in files)
+                and any(f.startswith(dir_b) for f in files)
+            ]
 
         # 按文件大小降序排序
         result.duplicates.sort(key=lambda x: x[2], reverse=True)

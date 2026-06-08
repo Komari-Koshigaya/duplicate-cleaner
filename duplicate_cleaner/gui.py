@@ -321,7 +321,18 @@ class DuplicateCleanerGUI:
         f = _ttk.Frame(outer, padding=12)
         f.pack(fill=X)
 
-        # 目录行
+        # 模式切换行
+        mf = _ttk.Frame(f)
+        mf.pack(fill=X, pady=(0, 8))
+        self.scan_mode_var = tk.StringVar(value="single")
+        _ttk.Radiobutton(mf, text="单目录扫描", variable=self.scan_mode_var,
+                         value="single", command=self._on_mode_change).pack(side=LEFT)
+        _ttk.Radiobutton(mf, text="文件夹对比", variable=self.scan_mode_var,
+                         value="compare", command=self._on_mode_change).pack(side=LEFT, padx=(15, 0))
+        _ttk.Label(mf, text="(选择两个目录，查找跨目录的重复文件)",
+                   foreground="gray").pack(side=LEFT, padx=(10, 0))
+
+        # 目录A行
         df = _ttk.Frame(f)
         df.pack(fill=X, pady=(0, 8))
         _ttk.Label(df, text="目录:", width=6).pack(side=LEFT)
@@ -329,6 +340,15 @@ class DuplicateCleanerGUI:
         self.dir_combo = _ttk.Combobox(df, textvariable=self.dir_var)
         self.dir_combo.pack(side=LEFT, fill=X, expand=True, padx=(0, 8))
         _ttk.Button(df, text="📂 浏览", command=self._browse_dir, bootstyle="outline" if _has_bootstrap else None).pack(side=LEFT)
+
+        # 目录B行（对比模式，初始隐藏）
+        self.dir_b_frame = _ttk.Frame(f)
+        self.dir_b_label = _ttk.Label(self.dir_b_frame, text="目录B:", width=6)
+        self.dir_b_label.pack(side=LEFT)
+        self.dir_b_var = tk.StringVar()
+        self.dir_b_combo = _ttk.Combobox(self.dir_b_frame, textvariable=self.dir_b_var)
+        self.dir_b_combo.pack(side=LEFT, fill=X, expand=True, padx=(0, 8))
+        _ttk.Button(self.dir_b_frame, text="📂 浏览", command=self._browse_dir_b, bootstyle="outline" if _has_bootstrap else None).pack(side=LEFT)
 
         # 选项行
         of = _ttk.Frame(f)
@@ -598,6 +618,21 @@ class DuplicateCleanerGUI:
         sm.add_command(label="💾 备份配置", command=self._backup_config)
         sm.add_command(label="📂 恢复配置", command=self._restore_config)
 
+        # 设置 - 右键菜单集成（仅 Windows）
+        if sys.platform == "win32":
+            sm.add_separator()
+            self.shell_integration_var = tk.BooleanVar(value=False)
+            try:
+                from .shell_integration import is_shell_integration_enabled
+                self.shell_integration_var.set(is_shell_integration_enabled())
+            except Exception:
+                pass
+            sm.add_checkbutton(
+                label="🖱️ 添加到右键菜单",
+                variable=self.shell_integration_var,
+                command=self._toggle_shell_integration
+            )
+
         # 帮助
         hm = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=hm)
@@ -614,6 +649,7 @@ class DuplicateCleanerGUI:
     def _apply_config(self):
         """应用配置"""
         self.dir_var.set(self.config.last_dir)
+        self.dir_b_var.set(self.config.last_dir_b)
         self.dir_combo['values'] = self.config.recent_dirs
         self.recursive_var.set(self.config.recursive)
         self.min_size_var.set(self.config.min_size)
@@ -701,6 +737,7 @@ class DuplicateCleanerGUI:
     def _save_config(self):
         """保存配置"""
         self.config.last_dir = self.dir_var.get()
+        self.config.last_dir_b = self.dir_b_var.get()
         self.config.recursive = self.recursive_var.get()
         self.config.min_size = self.min_size_var.get()
         self.config.file_filter = self.file_filter_var.get()
@@ -750,6 +787,28 @@ class DuplicateCleanerGUI:
         self._save_config()
         status = "开启" if self.close_to_tray_var.get() else "关闭"
         messagebox.showinfo("设置", f"关闭时最小化到托盘已{status}")
+
+    def _toggle_shell_integration(self):
+        """切换右键菜单集成"""
+        try:
+            from .shell_integration import enable_shell_integration, disable_shell_integration
+            if self.shell_integration_var.get():
+                ok = enable_shell_integration()
+                if ok:
+                    messagebox.showinfo("设置", "已添加到右键菜单\n重启资源管理器后生效")
+                else:
+                    messagebox.showerror("错误", "添加右键菜单失败")
+                    self.shell_integration_var.set(False)
+            else:
+                ok = disable_shell_integration()
+                if ok:
+                    messagebox.showinfo("设置", "已从右键菜单移除")
+                else:
+                    messagebox.showerror("错误", "移除右键菜单失败")
+                    self.shell_integration_var.set(True)
+        except ImportError:
+            messagebox.showerror("错误", "右键菜单集成仅支持 Windows 系统")
+            self.shell_integration_var.set(False)
 
     def _show_exclude_dirs_dialog(self):
         """显示排除目录设置对话框"""
@@ -833,6 +892,18 @@ class DuplicateCleanerGUI:
         d = filedialog.askdirectory(title="选择要扫描的目录")
         if d:
             self.dir_var.set(d)
+
+    def _browse_dir_b(self):
+        d = filedialog.askdirectory(title="选择对比目录")
+        if d:
+            self.dir_b_var.set(d)
+
+    def _on_mode_change(self):
+        """切换扫描模式时显示/隐藏目录B行"""
+        if self.scan_mode_var.get() == "compare":
+            self.dir_b_frame.pack(fill=X, pady=(0, 8))
+        else:
+            self.dir_b_frame.pack_forget()
 
     def _change_window_size(self, size):
         w, h = WINDOW_SIZES.get(size, WINDOW_SIZES["大"])
@@ -962,6 +1033,22 @@ class DuplicateCleanerGUI:
         if self.scanning:
             return
 
+        # 对比模式验证
+        compare_dir = None
+        if self.scan_mode_var.get() == "compare":
+            compare_dir = self.dir_b_var.get().strip()
+            if not compare_dir or not os.path.isdir(compare_dir):
+                messagebox.showerror("错误", "请选择有效的对比目录")
+                return
+            abs_a = os.path.abspath(d)
+            abs_b = os.path.abspath(compare_dir)
+            if abs_a == abs_b:
+                messagebox.showerror("错误", "对比模式下两个目录不能相同")
+                return
+            if abs_a.startswith(abs_b + os.sep) or abs_b.startswith(abs_a + os.sep):
+                messagebox.showerror("错误", "对比模式下两个目录不能有包含关系")
+                return
+
         self.scanning = True
         self._scan_start_time = time.time()  # 记录扫描开始时间
         self.scan_btn.configure(state=DISABLED)
@@ -979,14 +1066,14 @@ class DuplicateCleanerGUI:
         self.status_var.set("🔍 正在初始化扫描...")
 
         import threading
-        threading.Thread(target=self._scan_worker, args=(d,), daemon=True).start()
+        threading.Thread(target=self._scan_worker, args=(d, compare_dir), daemon=True).start()
 
     def _cancel_scan(self):
         self.scanner.cancel()
         self.cancel_btn.configure(state=DISABLED)
         self._update_status("正在取消...")
 
-    def _scan_worker(self, directory):
+    def _scan_worker(self, directory, compare_dir=None):
         try:
             min_size = 0
             try:
@@ -996,6 +1083,7 @@ class DuplicateCleanerGUI:
 
             result = self.scanner.scan(
                 directory=directory,
+                compare_dir=compare_dir,
                 recursive=self.recursive_var.get(),
                 min_size=min_size,
                 file_extensions=self.config.get_filter_extensions(),
@@ -1043,10 +1131,19 @@ class DuplicateCleanerGUI:
                 self.root.bell()
             return
 
-        self._update_status(f"✅ 扫描完成: {len(result.duplicates)} 组重复  |  耗时 {scan_time:.1f}s")
+        mode_label = " [对比模式]" if result.compare_dir else ""
+        self._update_status(f"✅ 扫描完成: {len(result.duplicates)} 组重复{mode_label}  |  耗时 {scan_time:.1f}s")
         self.progress_var.set(100)
         if self.sound_var.get():
             self.root.bell()
+
+        # 对比模式：准备目录前缀
+        is_compare = result.compare_dir is not None
+        dir_a_prefix = ""
+        dir_b_prefix = ""
+        if is_compare:
+            dir_a = os.path.abspath(self.dir_var.get().strip()) + os.sep
+            dir_b = os.path.abspath(result.compare_dir) + os.sep
 
         self.tree.configure(selectmode="none")
         self._all_tree_items = []  # 保存所有项目 ID
@@ -1060,22 +1157,33 @@ class DuplicateCleanerGUI:
                     mtime = "-"
                 # 获取文件图标
                 icon = _get_file_icon(fp)
+                # 对比模式：路径前加目录标识
+                display_path = fp
+                if is_compare:
+                    abs_fp = os.path.abspath(fp)
+                    if abs_fp.startswith(dir_a):
+                        display_path = "[A] " + fp
+                    elif abs_fp.startswith(dir_b):
+                        display_path = "[B] " + fp
                 item_id = self.tree.insert(
                     "", END,
                     text="",  # 图标列文本
                     image=icon,  # 图标
-                    values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, fp, h),
+                    values=("⬜" if j == 0 else "☐", f"#{i}", format_size(size), mtime, display_path, h),
                     tags=(tag,)
                 )
                 self._all_tree_items.append(item_id)
         self.tree.configure(selectmode="extended")
 
         self._select_second()
-        self.info_var.set(
+        info = (
             f"📊 共 {result.total_scanned} 个文件 | "
             f"{len(result.duplicates)} 组重复 ({result.total_duplicates} 个文件) | "
             f"可释放 {format_size(result.total_wasted)}"
         )
+        if result.compare_dir:
+            info += f"  |  对比模式"
+        self.info_var.set(info)
         self.delete_btn.configure(state=NORMAL)
         self.move_btn.configure(state=NORMAL)
 
@@ -1141,6 +1249,13 @@ class DuplicateCleanerGUI:
                 t += " ↓" if self.sort_reverse else " ↑"
             self.tree.heading(c, text=t)
 
+    @staticmethod
+    def _strip_dir_label(path_str):
+        """去除对比模式的 [A]/[B] 前缀，返回真实路径"""
+        if path_str.startswith("[A] ") or path_str.startswith("[B] "):
+            return path_str[4:]
+        return path_str
+
     def _on_tree_click(self, event):
         if self.tree.identify_region(event.x, event.y) != "cell":
             return
@@ -1149,7 +1264,7 @@ class DuplicateCleanerGUI:
         if not row or col != "#1":
             return
         # path 在第 4 列（索引 4）
-        fp = self.tree.item(row, "values")[4]
+        fp = self._strip_dir_label(self.tree.item(row, "values")[4])
         if fp in self.selected_files:
             self.selected_files.discard(fp)
             self.tree.set(row, "select", "☐")
@@ -1174,7 +1289,8 @@ class DuplicateCleanerGUI:
             return None
         v = self.tree.item(row, "values")
         # path 在第 4 列（索引 4）
-        return v[4] if v and len(v) > 4 else None
+        raw = v[4] if v and len(v) > 4 else None
+        return self._strip_dir_label(raw) if raw else None
 
     def _get_selected_filepath(self):
         sel = self.tree.selection()
@@ -1182,7 +1298,8 @@ class DuplicateCleanerGUI:
             return None
         v = self.tree.item(sel[0], "values")
         # path 在第 4 列（索引 4）
-        return v[4] if v and len(v) > 4 else None
+        raw = v[4] if v and len(v) > 4 else None
+        return self._strip_dir_label(raw) if raw else None
 
     def _open_file(self):
         fp = self._get_selected_filepath()
@@ -1223,7 +1340,7 @@ class DuplicateCleanerGUI:
             messagebox.showwarning("提示", "无法获取文件信息", parent=self.root)
             return
 
-        fp = values[4]  # path 在第 4 列
+        fp = self._strip_dir_label(values[4])  # path 在第 4 列
 
         # 显示文件属性
         try:
@@ -1328,7 +1445,7 @@ class DuplicateCleanerGUI:
                 orig.add(files[0])
         for item in self.tree.get_children():
             # path 在第 4 列（索引 4）
-            fp = self.tree.item(item, "values")[4]
+            fp = self._strip_dir_label(self.tree.item(item, "values")[4])
             self.tree.set(item, "select", "☑" if fp in self.selected_files else ("⬜" if fp in orig else "☐"))
 
     # ==================== 移动和删除 ====================
@@ -1390,6 +1507,70 @@ class DuplicateCleanerGUI:
         if success > 0:
             self._start_scan()
 
+    def _ask_delete_mode(self, count, size_str):
+        """
+        弹出删除方式选择对话框
+
+        Returns:
+            True  = 移到回收站
+            False = 永久删除
+            None  = 取消（X 按钮或取消按钮）
+        """
+        result = {"value": None}
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title("删除方式")
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.resizable(False, False)
+
+        # 图标
+        icon_path = _get_icon_path()
+        if icon_path:
+            try:
+                dlg.iconbitmap(str(icon_path))
+            except Exception:
+                pass
+
+        # 居中
+        w, h = 400, 170
+        sw = dlg.winfo_screenwidth()
+        sh = dlg.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+        frame = tk.Frame(dlg, padx=20, pady=15)
+        frame.pack(fill=BOTH, expand=True)
+
+        tk.Label(frame, text=f"删除 {count} 个文件？", font=("Microsoft YaHei UI", 12, "bold")).pack(anchor=W)
+        tk.Label(frame, text=f"可释放: {size_str}", fg="gray").pack(anchor=W, pady=(2, 15))
+
+        btn_frame = tk.Frame(frame)
+        btn_frame.pack(fill=X)
+
+        def on_trash():
+            result["value"] = True
+            dlg.destroy()
+
+        def on_permanent():
+            result["value"] = False
+            dlg.destroy()
+
+        def on_cancel():
+            result["value"] = None
+            dlg.destroy()
+
+        tk.Button(btn_frame, text="🗑️ 回收站", width=10, command=on_trash).pack(side=LEFT, expand=True)
+        tk.Button(btn_frame, text="❌ 永久删除", width=10, command=on_permanent).pack(side=LEFT, expand=True)
+
+        # X 按钮和 Esc = 取消
+        dlg.protocol("WM_DELETE_WINDOW", on_cancel)
+        dlg.bind("<Escape>", lambda e: on_cancel())
+
+        dlg.wait_window()
+        return result["value"]
+
     def _delete_selected(self):
         if not self.selected_files:
             messagebox.showinfo("提示", "请先选择要删除的文件")
@@ -1411,7 +1592,10 @@ class DuplicateCleanerGUI:
 
         use_trash = False
         if is_send2trash_available():
-            use_trash = messagebox.askyesno("删除方式", f"删除 {len(files)} 个文件？\n释放: {format_size(total)}\n\n是=回收站 否=永久删除")
+            result = self._ask_delete_mode(len(files), format_size(total))
+            if result is None:
+                return  # 用户取消（点了 X 或取消按钮）
+            use_trash = result
         else:
             if not messagebox.askyesno("确认", f"永久删除 {len(files)} 个文件？\n释放: {format_size(total)}\n\n⚠️ 不可撤销！"):
                 return
@@ -1479,6 +1663,7 @@ class DuplicateCleanerGUI:
             import json
             data = {
                 "version": __version__,
+                "compare_dir": self.scan_result.compare_dir,
                 "duplicates": [
                     {"hash": h, "files": files, "size": size}
                     for h, files, size in self.scan_result.duplicates
@@ -1517,6 +1702,7 @@ class DuplicateCleanerGUI:
             result.total_scanned = data.get("total_scanned", 0)
             result.total_duplicates = data.get("total_duplicates", 0)
             result.total_wasted = data.get("total_wasted", 0)
+            result.compare_dir = data.get("compare_dir")
 
             # 恢复选中状态
             self.selected_files = set(data.get("selected", []))

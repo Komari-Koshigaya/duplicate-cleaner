@@ -59,6 +59,19 @@ class TestDisplayDuplicates:
         assert "2 组重复" in captured.out
         assert "5 个重复文件" in captured.out
 
+    def test_display_compare_mode(self, capsys):
+        """测试对比模式显示"""
+        result = ScanResult(
+            duplicates=[("hash1", ["/a/file.txt", "/b/file.txt"], 100)],
+            total_scanned=5,
+            total_duplicates=2,
+            total_wasted=100,
+            compare_dir="/b"
+        )
+        display_duplicates(result)
+        captured = capsys.readouterr()
+        assert "跨目录重复文件" in captured.out
+
 
 class TestDeleteFiles:
     """delete_files 函数测试"""

@@ -2,11 +2,12 @@
 
 重复文件查找与清理工具，基于文件内容哈希精准识别重复文件。
 
+当前版本：v1.3.0
+
 ## 功能特点
 
-- ✅ 基于 MD5 哈希准确判断文件内容重复
+- ✅ 基于内容哈希精准判断文件重复（xxhash 优先，MD5 兜底）
 - ✅ 多线程并行扫描，高性能（自动检测 SSD/HDD 调整线程数）
-- ✅ xxhash 哈希算法（比 MD5 快数倍）
 - ✅ 图形界面（tkinter + ttkbootstrap）
 - ✅ 命令行模式
 - ✅ 双击/右键打开文件预览
@@ -54,6 +55,7 @@ duplicate-cleaner/
 ├── icon.png                    # 托盘图标
 ├── entry.py                    # 打包入口
 ├── build.py                    # 打包脚本
+├── build_debug.py              # 调试版打包脚本
 ├── CLAUDE.md                   # 项目说明
 ├── README.md                   # 用户文档
 ├── requirements.txt            # 依赖声明
