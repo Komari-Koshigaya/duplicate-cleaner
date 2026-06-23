@@ -1430,7 +1430,7 @@ class DuplicateCleanerGUI:
         all_f = set()
         if self.scan_result:
             for _, files, _ in self.scan_result.duplicates:
-                all_f.update(files[1:])
+                all_f.update(files)  # 包含所有文件（files[0] 和 files[1:]）
         self.selected_files = all_f - self.selected_files
         self._refresh_checks()
 
